@@ -1,0 +1,28 @@
+workflow,trigger,step_number,step,source
+Approve Invoice,New vendor invoice arrives,1,Check that the invoice has vendor name invoice number date amount and payment details,Finance SOP
+Approve Invoice,New vendor invoice arrives,2,Match the invoice against the related purchase order or approved request,Finance SOP
+Approve Invoice,New vendor invoice arrives,3,If the invoice amount is under 500 dollars and the vendor details match approve it automatically,Finance SOP
+Approve Invoice,New vendor invoice arrives,4,If the invoice amount is 500 dollars or more send it to the finance manager for approval,Finance SOP
+Approve Invoice,New vendor invoice arrives,5,If the invoice is missing vendor details or looks duplicated mark it as needs human review,Finance SOP
+Approve Invoice,New vendor invoice arrives,6,After approval update the invoice status and notify accounting to schedule payment,Finance SOP
+Handle Refund Request,Customer asks for a refund,1,Find the customer order and confirm the product purchase date and payment status,Refund Policy
+Handle Refund Request,Customer asks for a refund,2,If the request is within 7 days and the product was not used heavily approve the refund,Refund Policy
+Handle Refund Request,Customer asks for a refund,3,If the request is after 7 days offer store credit instead of a cash refund,Refund Policy
+Handle Refund Request,Customer asks for a refund,4,If the refund amount is over 100 dollars escalate to a support lead before responding,Refund Policy
+Handle Refund Request,Customer asks for a refund,5,Send the customer a clear decision with the reason and expected processing time,Refund Policy
+Handle Refund Request,Customer asks for a refund,6,Record the refund decision and source order link in the support log,Refund Policy
+Process Cancellation,Customer wants to cancel an active order,1,Check whether the order has already shipped or entered fulfillment,Cancellation Policy
+Process Cancellation,Customer wants to cancel an active order,2,If the order has not shipped cancel it and confirm by email,Cancellation Policy
+Process Cancellation,Customer wants to cancel an active order,3,If the order has shipped explain that cancellation is no longer available and offer a return,Cancellation Policy
+Process Cancellation,Customer wants to cancel an active order,4,If the customer is upset or mentions legal action escalate to a support lead,Cancellation Policy
+Process Cancellation,Customer wants to cancel an active order,5,Update the order status and add an internal note explaining the decision,Cancellation Policy
+Approve Pricing Exception,Sales rep requests a custom discount,1,Check the customer plan contract value and requested discount percentage,Pricing Policy
+Approve Pricing Exception,Sales rep requests a custom discount,2,If the discount is 10 percent or less approve it for monthly plans,Pricing Policy
+Approve Pricing Exception,Sales rep requests a custom discount,3,If the discount is between 11 and 20 percent require manager approval,Pricing Policy
+Approve Pricing Exception,Sales rep requests a custom discount,4,If the discount is above 20 percent escalate to the founder or finance owner,Pricing Policy
+Approve Pricing Exception,Sales rep requests a custom discount,5,Record the final approved discount and expiration date in the CRM,Pricing Policy
+Respond To Incident,Production issue affects customers,1,Confirm the incident by checking monitoring alerts customer reports and recent deployments,Incident Runbook
+Respond To Incident,Production issue affects customers,2,Post an internal incident message with impact start time and current owner,Incident Runbook
+Respond To Incident,Production issue affects customers,3,If payments login or data access is affected escalate immediately to engineering lead,Incident Runbook
+Respond To Incident,Production issue affects customers,4,Update customers every 30 minutes until the issue is resolved,Incident Runbook
+Respond To Incident,Production issue affects customers,5,After resolution write a short incident summary with cause fix and prevention step,Incident Runbook

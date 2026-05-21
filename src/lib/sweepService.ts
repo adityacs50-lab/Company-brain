@@ -77,6 +77,21 @@ function isDriveTextCandidate(file: { name?: string | null; mimeType?: string | 
   );
 }
 
+function isExtractionCandidate(source: IngestedSource) {
+  const title = source.title.toLowerCase();
+  const text = `${source.title}\n${source.content}`.toLowerCase();
+
+  if (title.startsWith('email thread:')) {
+    return false;
+  }
+
+  if (/application deadline|academic program|cucet|adidas|epic games|google play|google maps|youtube|avatar|claude|startup financial projections|masterclass|study guide|syllabus|exam|crash course|career|internships?|newsletter/.test(text)) {
+    return false;
+  }
+
+  return /approve invoice|invoice|purchase order|finance manager|refund|return|cancellation|pricing exception|discount|incident|runbook|support lead|escalat|company brain demo workflows|workflow,trigger,step_number,step|sop|operating rule/.test(text);
+}
+
 /**
  * Gets or initializes the oauth client for Google Gmail & Drive
  */
@@ -458,7 +473,8 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
 
       // 3. Extract skills from the sources just saved for this employee
       if (ingestedSources.length > 0) {
-        const sourceBatches = chunkArray(ingestedSources, EXTRACTION_BATCH_SIZE);
+        const extractionSources = ingestedSources.filter(isExtractionCandidate);
+        const sourceBatches = chunkArray(extractionSources, EXTRACTION_BATCH_SIZE);
         logStatus(orgId, `Calling Groq API (llama-3.3-70b-versatile) in ${sourceBatches.length} batches to extract skills from ${empName}'s communications...`);
 
         let employeeSkillsExtractedCount = 0;
@@ -497,13 +513,8 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
           }
         }
 
-        if (employeeSkillsExtractedCount === 0 && ingestedSources.length > 0) {
-          const fallbackCandidates = ingestedSources.filter(source => {
-            const text = `${source.title}\n${source.content}`.toLowerCase();
-            const isRejected = /study guide|syllabus|exam|crash course|career|job-ready|internships?|newsletter|altman|musk|openai|anthropic|mathematics|calculus|linear algebra|probability/.test(text);
-            const isWorkflow = /faq|tasks? in detail|process|steps?|requirements?|must submit|how to|support|approval|policy|form|certificate|screenshot|participants?|presentation|proposal|problem statement/.test(text);
-            return isWorkflow && !isRejected;
-          });
+        if (employeeSkillsExtractedCount === 0 && extractionSources.length > 0) {
+          const fallbackCandidates = extractionSources;
           const strongestSource = [...fallbackCandidates].sort((a, b) => b.content.length - a.content.length)[0];
           const fallbackSteps = strongestSource?.content
             .split(/\r?\n/)
@@ -540,7 +551,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
               logStatus(orgId, `Saved 1 review-ready fallback skill so the scan has a visible result.`);
             }
           } else {
-            logStatus(orgId, `No workflows were saved from ${ingestedSources.length} scanned sources because the scanned text did not contain enough usable step-by-step content.`);
+            logStatus(orgId, `No workflows were saved because the matched sources did not contain enough usable step-by-step content.`);
           }
         }
         

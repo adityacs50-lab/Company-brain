@@ -40,8 +40,25 @@ function normalizeLine(line: string) {
 
 function isLikelyDemoWorkflowSource(source: SkillExtractionSource) {
   const text = `${source.title}\n${source.content}`.toLowerCase();
+  const title = source.title.toLowerCase();
+
+  if (title.startsWith('email thread:')) {
+    return false;
+  }
 
   const rejectPatterns = [
+    /application deadline/,
+    /academic program/,
+    /cucet/,
+    /adidas/,
+    /epic games/,
+    /google play/,
+    /google maps/,
+    /youtube/,
+    /avatar/,
+    /claude/,
+    /startup financial projections/,
+    /masterclass/,
     /study guide/,
     /syllabus/,
     /exam/,
@@ -59,23 +76,23 @@ function isLikelyDemoWorkflowSource(source: SkillExtractionSource) {
   }
 
   const workflowPatterns = [
-    /faq/,
-    /tasks? in detail/,
-    /process/,
-    /steps?/,
-    /requirements?/,
-    /must submit/,
-    /how to/,
-    /support/,
-    /approval/,
-    /policy/,
-    /form/,
-    /certificate/,
-    /screenshot/,
-    /participants?/,
-    /presentation/,
-    /proposal/,
-    /problem statement/,
+    /approve invoice/,
+    /invoice/,
+    /purchase order/,
+    /finance manager/,
+    /refund/,
+    /return/,
+    /cancellation/,
+    /pricing exception/,
+    /discount/,
+    /incident/,
+    /runbook/,
+    /support lead/,
+    /escalat/,
+    /company brain demo workflows/,
+    /workflow,trigger,step_number,step/,
+    /sop/,
+    /operating rule/,
   ];
 
   return workflowPatterns.some(pattern => pattern.test(text));
@@ -90,7 +107,7 @@ function extractUsefulLines(content: string) {
     .filter(line => {
       if (line.length < 12 || line.length > 220) return false;
       if (/^(no|your task|requirements?|important points to remember|fundamentals and classification|definition of|dṛṣṭi|paramparā|laukika|ancient and continuous|holistic|experience-based|interdisciplinary)\b/i.test(line)) return false;
-      return /^(q\d+|answer:|important|requirement|must|submit|complete|check|review|share|post|send|open|visit|use|wait|fill|upload|approve|confirm|take|join|contact|access|provide|record|invite|schedule|certificate|support|session|minimum|each|after|before|where|when|how|can|will|what|if)/i.test(line);
+      return /^(check|match|if|after|before|approve|send|mark|notify|find|record|confirm|offer|explain|update|escalate|post|write|route|require|review|process|verify|create|close|refund|cancel)/i.test(line);
     })
     .filter(Boolean);
 }
@@ -133,7 +150,7 @@ export async function extractSkillsFromSources(sources: SkillExtractionSource[])
 
   try {
     const systemPrompt = `You are an expert workflow extraction agent.
-Analyze the following raw work material (emails, Slack messages, Google Docs, FAQs, checklists, task lists, syllabi, guides, or Notion pages) and extract useful repeatable workflows, instructions, rules, policies, decisions, checklists, or support procedures.
+Analyze the following raw company operating material and extract only repeatable workflows that an AI agent could safely follow.
 
 For each procedural skill identified, extract:
 1. A unique, short snake_case name for the skill (e.g. "auto_approve_small_refunds").
@@ -152,8 +169,8 @@ You MUST respond strictly with a valid JSON object matching the following struct
 }
 
 Important Guidelines:
-- Extract actual repeatable procedures, checklist steps, admin processes, FAQ answer flows, event instructions, support instructions, assignment processes, or operating rules.
-- Exclude casual chit-chat, scheduling questions, or non-actionable remarks.
+- Extract only business operating procedures such as invoice approval, refunds, cancellations, pricing exceptions, support escalation, incident response, or internal SOPs.
+- Exclude newsletters, hiring alerts, school/application deadlines, course material, personal subscriptions, product ads, generic FAQs, and non-company workflows.
 - Make the steps explicit, practical, and easy for a person or AI agent to follow.
 - If the communication contains no procedures or workflows, return an empty "skills" array: {"skills": []}.
 - Respond ONLY with valid JSON. Do not include markdown code block formatting or preambles outside the JSON.`;
