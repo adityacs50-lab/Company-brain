@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { WebClient } from '@slack/web-api';
 import { Client as NotionClient } from '@notionhq/client';
 import { supabase } from './db';
-import { extractSkillsFromText, ExtractedSkill } from './groq';
+import { extractSkillsFromSources } from './groq';
 
 // Global, in-memory sweep status state to support dashboard polling
 export interface SweepStatus {
@@ -24,6 +24,22 @@ export interface SweepStatus {
 export const activeSweeps = new Map<string, SweepStatus>();
 
 const searchKeywords = "refund OR policy OR approval OR exception OR decision OR rule OR process OR escalat*";
+const EXTRACTION_BATCH_SIZE = 8;
+
+type IngestedSource = {
+  title: string;
+  content: string;
+};
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
 
 /**
  * Gets or initializes the oauth client for Google Gmail & Drive
@@ -102,6 +118,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
       logStatus(orgId, `>>> Starting Ingestion for employee: ${empName} (${employee.department || 'No Dept'})`);
 
       let parsedSourcesCount = 0;
+      const ingestedSources: IngestedSource[] = [];
 
       // --- A. GMAIL SWEEP ---
       if (employee.gmail_token) {
@@ -131,16 +148,18 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             const body = messages.map(m => m.snippet || '').join('\n---\n');
 
             // Save to raw sources database
+            const title = `Email Thread: ${subject}`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
               source_type: 'gmail',
               external_id: t.id,
-              title: `Email Thread: ${subject}`,
+              title,
               content: body,
             });
 
             if (!insertErr) {
+              ingestedSources.push({ title, content: body });
               parsedSourcesCount++;
               sweep.emailsProcessed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -203,16 +222,18 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             const extId = match.iid || match.ts || Math.random().toString();
             const channelName = match.channel?.name ? `#${match.channel.name}` : 'Slack Thread';
 
+            const title = `Slack Message (${channelName})`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
               source_type: 'slack',
               external_id: extId,
-              title: `Slack Message (${channelName})`,
+              title,
               content: content,
             });
 
             if (!insertErr) {
+              ingestedSources.push({ title, content });
               parsedSourcesCount++;
               sweep.slackMessagesAnalyzed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -251,16 +272,18 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
 
             const content = docRes.data as string;
             
+            const title = `Google Doc: ${file.name}`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
               source_type: 'gdrive',
               external_id: file.id,
-              title: `Google Doc: ${file.name}`,
+              title,
               content: content,
             });
 
             if (!insertErr) {
+              ingestedSources.push({ title, content });
               parsedSourcesCount++;
               sweep.driveFilesParsed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -318,16 +341,19 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
               .filter(Boolean)
               .join('\n');
 
+            const title = `Notion Page: ${pageTitle}`;
+            const content = textBlocks || `Empty content properties. Ref: ${(page as any).url || page.id}`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
               source_type: 'notion',
               external_id: page.id,
-              title: `Notion Page: ${pageTitle}`,
-              content: textBlocks || `Empty content properties. Ref: ${(page as any).url || page.id}`,
+              title,
+              content,
             });
 
             if (!insertErr) {
+              ingestedSources.push({ title, content });
               parsedSourcesCount++;
               sweep.notionPagesScanned++;
               activeSweeps.set(orgId, { ...sweep });
@@ -342,24 +368,15 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
       logStatus(orgId, `Ingested ${parsedSourcesCount} raw communications sources for ${empName}.`);
 
       // 3. Extract skills from the sources just saved for this employee
-      if (parsedSourcesCount > 0) {
-        logStatus(orgId, `Calling Groq API (llama-3.3-70b-versatile) to extract skills from ${empName}'s communications...`);
-        
-        const { data: sources, error: sourceErr } = await supabase
-          .from('brain_sources')
-          .select('*')
-          .eq('employee_id', empId)
-          .eq('org_id', orgId);
-
-        if (sourceErr || !sources) {
-          logStatus(orgId, `Error loading sources for extraction: ${sourceErr?.message}`);
-          continue;
-        }
+      if (ingestedSources.length > 0) {
+        const sourceBatches = chunkArray(ingestedSources, EXTRACTION_BATCH_SIZE);
+        logStatus(orgId, `Calling Groq API (llama-3.3-70b-versatile) in ${sourceBatches.length} batches to extract skills from ${empName}'s communications...`);
 
         let employeeSkillsExtractedCount = 0;
 
-        for (const src of sources) {
-          const skillsList = await extractSkillsFromText(src.content);
+        for (let batchIndex = 0; batchIndex < sourceBatches.length; batchIndex++) {
+          logStatus(orgId, `Groq extraction batch ${batchIndex + 1}/${sourceBatches.length} for ${empName}...`);
+          const skillsList = await extractSkillsFromSources(sourceBatches[batchIndex]);
           
           for (const s of skillsList) {
             // Save skills directly to the brain_skills table

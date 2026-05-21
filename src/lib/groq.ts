@@ -18,12 +18,24 @@ export interface ExtractedSkill {
   steps: string[];
 }
 
+export interface SkillExtractionSource {
+  title: string;
+  content: string;
+}
+
 /**
  * Uses Llama 3.3 70B Versatile on Groq to extract structured, operational
  * workflows from raw employee communications.
  */
-export async function extractSkillsFromText(text: string): Promise<ExtractedSkill[]> {
-  if (!text || text.trim().length < 10) {
+export async function extractSkillsFromSources(sources: SkillExtractionSource[]): Promise<ExtractedSkill[]> {
+  const usableSources = sources
+    .map((source) => ({
+      title: source.title || 'Untitled source',
+      content: (source.content || '').trim(),
+    }))
+    .filter((source) => source.content.length >= 10);
+
+  if (usableSources.length === 0) {
     return [];
   }
 
@@ -54,10 +66,17 @@ Important Guidelines:
 - If the communication contains no procedures or workflows, return an empty "skills" array: {"skills": []}.
 - Respond ONLY with valid JSON. Do not include markdown code block formatting or preambles outside the JSON.`;
 
+    const sourceText = usableSources
+      .map((source, index) => {
+        const trimmedContent = source.content.slice(0, 4000);
+        return `SOURCE ${index + 1}: ${source.title}\n${trimmedContent}`;
+      })
+      .join('\n\n---\n\n');
+
     const response = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Here is the raw employee communication:\n\n${text}` },
+        { role: 'user', content: `Here are raw employee communications to analyze together:\n\n${sourceText}` },
       ],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.1,
@@ -78,4 +97,8 @@ Important Guidelines:
     console.error('Error in Groq skill extraction:', error);
     return [];
   }
+}
+
+export async function extractSkillsFromText(text: string): Promise<ExtractedSkill[]> {
+  return extractSkillsFromSources([{ title: 'Raw communication', content: text }]);
 }
