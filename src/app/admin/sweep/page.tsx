@@ -167,7 +167,7 @@ export default function SweepDashboard() {
     if (connected || error) {
       fetchEmployees();
       if (error) {
-        alert(`OAuth connection failed: ${error}`);
+        alert(`Connection failed: ${error}`);
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -226,7 +226,7 @@ export default function SweepDashboard() {
   // Triggering the Sweeper
   const handleTriggerSweep = async () => {
     if (selectedEmployees.length === 0) {
-      alert('Please select at least one employee with active connections.');
+      alert('Please choose at least one connected person.');
       return;
     }
     setIsSweeping(true);
@@ -234,7 +234,7 @@ export default function SweepDashboard() {
     setSweepStatus(prev => ({
       ...prev,
       status: 'running',
-      logs: ['[System] Connecting API Clients...', '[System] Sweeper pipeline initiated.'],
+      logs: ['[System] Connecting work apps...', '[System] Scan started.'],
     }));
 
     try {
@@ -248,7 +248,7 @@ export default function SweepDashboard() {
       });
 
       if (!res.ok) {
-        throw new Error('Ingestion trigger failed');
+        throw new Error('Could not start the scan');
       }
     } catch (err: any) {
       console.error(err);
@@ -256,7 +256,7 @@ export default function SweepDashboard() {
       setSweepStatus(prev => ({
         ...prev,
         status: 'failed',
-        logs: [...prev.logs, `[ERROR] Ingestion Trigger Failure: ${err.message}`],
+        logs: [...prev.logs, `[ERROR] ${err.message}`],
       }));
     }
   };
@@ -281,7 +281,7 @@ export default function SweepDashboard() {
         await fetchSkills();
         setActiveTab('verify'); // Transition to human verification
       } else {
-        alert(`Deduplication error: ${data.error}`);
+        alert(`Could not combine duplicate skills: ${data.error}`);
       }
     } catch (err) {
       console.error('Error during deduplication:', err);
@@ -405,7 +405,7 @@ export default function SweepDashboard() {
           </div>
 
           <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-            <strong>How connection works:</strong> Employees authorize read-only OAuth credentials. Connect buttons generate instant redirection tokens.
+            <strong>How it works:</strong> Connect work apps, scan for repeatable workflows, then review the skills the app finds.
           </div>
 
           <div className="employee-card-list">
@@ -441,13 +441,13 @@ export default function SweepDashboard() {
                       <div className="employee-sources-status">
                         {/* Gmail/GDrive */}
                         {emp.gmail_connected ? (
-                          <span className="source-badge connected" title="Gmail & Drive API Connected">GOOGLE</span>
+                          <span className="source-badge connected" title="Google connected">GOOGLE</span>
                         ) : (
                           <Link 
                             href={authUrl('google', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
-                            title="Connect Gmail & Google Drive OAuth"
+                            title="Connect Gmail and Google Drive"
                           >
                             + GOOGLE
                           </Link>
@@ -455,13 +455,13 @@ export default function SweepDashboard() {
 
                         {/* Slack */}
                         {emp.slack_connected ? (
-                          <span className="source-badge connected" title="Slack API Connected">SLACK</span>
+                          <span className="source-badge connected" title="Slack connected">SLACK</span>
                         ) : (
                           <Link 
                             href={authUrl('slack', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
-                            title="Connect Slack Workspace OAuth"
+                            title="Connect Slack"
                           >
                             + SLACK
                           </Link>
@@ -469,13 +469,13 @@ export default function SweepDashboard() {
 
                         {/* Notion */}
                         {emp.notion_connected ? (
-                          <span className="source-badge connected" title="Notion API Connected">NOTION</span>
+                          <span className="source-badge connected" title="Notion connected">NOTION</span>
                         ) : (
                           <Link 
                             href={authUrl('notion', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
-                            title="Connect Notion Workspace OAuth"
+                            title="Connect Notion"
                           >
                             + NOTION
                           </Link>
@@ -498,31 +498,31 @@ export default function SweepDashboard() {
               <div className="wizard-step-number">1</div>
               <div className="wizard-step-text">
                 <h4>Connect Employees</h4>
-                <p>Authorize API access</p>
+                <p>Link work accounts</p>
               </div>
             </div>
 
             <div className={`wizard-tab ${activeTab === 'sweep' ? 'active' : ''}`} onClick={() => setActiveTab('sweep')}>
               <div className="wizard-step-number">2</div>
               <div className="wizard-step-text">
-                <h4>Sweep Ingestion</h4>
-                <p>Scan communications</p>
+                <h4>Find Workflows</h4>
+                <p>Read emails and docs</p>
               </div>
             </div>
 
             <div className={`wizard-tab ${activeTab === 'dedup' ? 'active' : ''}`} onClick={() => setActiveTab('dedup')}>
               <div className="wizard-step-number">3</div>
               <div className="wizard-step-text">
-                <h4>Deduplicate Vector</h4>
-                <p>Calculate similarity</p>
+                <h4>Combine Duplicates</h4>
+                <p>Clean up repeats</p>
               </div>
             </div>
 
             <div className={`wizard-tab ${activeTab === 'verify' ? 'active' : ''}`} onClick={() => setActiveTab('verify')}>
               <div className="wizard-step-number">4</div>
               <div className="wizard-step-text">
-                <h4>Verify & Catalog</h4>
-                <p>Human operational manual</p>
+                <h4>Review Playbook</h4>
+                <p>Approve useful skills</p>
               </div>
             </div>
           </div>
@@ -533,27 +533,27 @@ export default function SweepDashboard() {
           {activeTab === 'connect' && (
             <div className="action-card backdrop-glass">
               <div className="action-card-header">
-                <h2>Multi-User API Ingestion Control</h2>
-                <p>Manage and audit OAuth authorizations before running knowledge sweeps. Ensure all key personnel are connected.</p>
+                <h2>Connect Your Work Apps</h2>
+                <p>Choose whose work history to scan. The app looks for repeatable company know-how.</p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
                 <div style={{ border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
                   <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem', color: 'var(--accent-cyan)' }}>
-                    <ShieldCheck size={18} /> Domain OAuth Auditing
+                    <ShieldCheck size={18} /> Private by Design
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                    All OAuth credentials are saved as secure, encrypted refresh tokens in Supabase. Raw messages and database block text are indexed strictly for skill extraction and are never visible to other employees or standard dashboards. Only aggregated operational skills are exported.
+                    Connected accounts are used only to find repeatable workflows. The final output is a clean playbook of useful company skills, not a tool for browsing private messages.
                   </p>
                 </div>
 
                 <div style={{ border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: '#60A5FA' }}>
-                      Ready to Run Sweep?
+                      Ready to Scan?
                     </h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Currently, you have <strong>{employees.filter(e => e.gmail_connected || e.slack_connected || e.notion_connected).length}</strong> employees ready. Select checkboxes in left pane and trigger the sweeper.
+                      You have <strong>{employees.filter(e => e.gmail_connected || e.slack_connected || e.notion_connected).length}</strong> connected person ready. Choose them on the left, then start the scan.
                     </p>
                   </div>
                   <button 
@@ -562,7 +562,7 @@ export default function SweepDashboard() {
                     disabled={selectedEmployees.length === 0}
                     style={{ marginTop: '1rem', width: '100%' }}
                   >
-                    Start Ingestion Sweep ({selectedEmployees.length} Target Employees) →
+                    Start Scan ({selectedEmployees.length} Person) →
                   </button>
                 </div>
               </div>
@@ -576,12 +576,12 @@ export default function SweepDashboard() {
             <div className="action-card backdrop-glass">
               <div className="action-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h2>Enterprise Knowledge Sweep Engine</h2>
-                  <p>Streaming real-time API integrations scanning connected channels, email archives, drives, and notions.</p>
+                  <h2>Find Hidden Company Know-How</h2>
+                  <p>Scan connected apps and turn scattered messages, emails, docs, and pages into clear reusable workflows.</p>
                 </div>
                 {sweepStatus.status === 'running' && (
                   <div style={{ background: 'rgba(6,182,212,0.1)', color: 'var(--accent-cyan)', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', animation: 'pulseGlow 1s infinite' }}>
-                    LIVE SWEEPER ACTIVE
+                    SCAN RUNNING
                   </div>
                 )}
               </div>
@@ -617,7 +617,7 @@ export default function SweepDashboard() {
                 <div className="console-header">
                   <div className="console-title">
                     <div className="console-dot"></div>
-                    <span>Orchestrator Terminal Output Logs</span>
+                    <span>Scan Progress</span>
                   </div>
                   <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)', fontFamily: 'var(--font-mono)' }}>PAGER=cat</span>
                 </div>
@@ -635,7 +635,7 @@ export default function SweepDashboard() {
                   disabled={sweepStatus.status === 'running' || sweepStatus.rawSkillsExtracted === 0}
                   onClick={() => setActiveTab('dedup')}
                 >
-                  Proceed to Vector Deduplication ({sweepStatus.rawSkillsExtracted} Raw Skills) →
+                  Review and Combine Skills ({sweepStatus.rawSkillsExtracted} Found) →
                 </button>
               </div>
             </div>
@@ -647,15 +647,15 @@ export default function SweepDashboard() {
           {activeTab === 'dedup' && (
             <div className="action-card backdrop-glass">
               <div className="action-card-header">
-                <h2>Vector Similarity Deduplication Engine</h2>
-                <p>Executes TF-IDF and character/word token n-gram vectors. Skills matching similarity thresholds $\ge 0.85$ are consolidated with neural weighting.</p>
+                <h2>Clean Up Repeated Skills</h2>
+                <p>Similar workflows are combined so the final playbook is short, clear, and easy to review.</p>
               </div>
 
               <div className="dedup-wrapper">
                 <div className="dedup-action-bar">
                   <div>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Loaded <strong>{skills.length}</strong> raw procedural records across database tables.
+                      Loaded <strong>{skills.length}</strong> skills found from the scan.
                     </span>
                   </div>
                   <button 
@@ -666,10 +666,10 @@ export default function SweepDashboard() {
                   >
                     {dedupLoading ? (
                       <>
-                        <RefreshCw size={14} className="animate-spin" /> Calculating Cosine Similarity Vectors...
+                        <RefreshCw size={14} className="animate-spin" /> Combining similar skills...
                       </>
                     ) : (
-                      <>📐 Execute Similarity Deduplication Merge</>
+                      <>Combine Similar Skills</>
                     )}
                   </button>
                 </div>
@@ -677,19 +677,19 @@ export default function SweepDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   <div style={{ border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
                     <h4 style={{ fontWeight: '600', marginBottom: '0.5rem', fontSize: '1rem', color: 'var(--accent-cyan)' }}>
-                      Cosine Similarity Clustering
+                      Duplicate Cleanup
                     </h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                      Compares text vectors mathematically. When text fragments like A: <em>&quot;refunds under $50 auto-approve&quot;</em> and B: <em>&quot;approve refunds less than $50&quot;</em> map within 0.85 cosine range, the orchestrator triggers Groq (Llama-3.3-70B-Versatile) to resolve the nuance and generate a clean combined workflow.
+                      If two skills say nearly the same thing, the app merges them into one cleaner workflow. For example, &quot;refunds under $50 auto-approve&quot; and &quot;approve refunds less than $50&quot; become one rule.
                     </p>
                   </div>
 
                   <div style={{ border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
                     <h4 style={{ fontWeight: '600', marginBottom: '0.5rem', fontSize: '1rem', color: '#8B5CF6' }}>
-                      Source Traceability
+                      Source Links
                     </h4>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                      Each extracted skill keeps references to the email, document, Slack message, or Notion page that produced it, so reviewers can inspect the original context before approval.
+                      Each skill can link back to the email, document, Slack message, or Notion page it came from, so you can check the original context before approving it.
                     </div>
                   </div>
                 </div>
@@ -704,8 +704,8 @@ export default function SweepDashboard() {
             <div className="action-card backdrop-glass">
               <div className="action-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <h2>Operational Skill Manual & Human Verification</h2>
-                  <p>Inspect consolidated corporate procedures. Approve skills for agents and internal documentation.</p>
+                  <h2>Company Playbook Review</h2>
+                  <p>Review the workflows the app found. Approve the ones that are accurate enough for future AI agents to use.</p>
                 </div>
                 
                 {/* Search Bar filter */}
@@ -714,7 +714,7 @@ export default function SweepDashboard() {
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Search trigger or skills..."
+                    placeholder="Search workflows..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{ paddingLeft: '32px', width: '250px' }}
@@ -727,7 +727,7 @@ export default function SweepDashboard() {
                 {filteredSkills.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '4rem 0', border: '1px dashed var(--border-glass)', borderRadius: '12px', color: 'var(--text-muted)' }}>
                     <BookOpen size={36} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-                    <p>No operational skills mapped. Run Step 2 (Sweep Ingestion) first.</p>
+                    <p>No skills found yet. Run Step 2 first.</p>
                   </div>
                 ) : (
                   filteredSkills.map(skill => {
@@ -756,7 +756,7 @@ export default function SweepDashboard() {
 
                         {/* Operational Trigger */}
                         <div className="skill-trigger-text">
-                          <strong>TRIGGER:</strong> {skill.trigger}
+                          <strong>WHEN THIS HAPPENS:</strong> {skill.trigger}
                         </div>
 
                         {/* Chronological Steps */}
