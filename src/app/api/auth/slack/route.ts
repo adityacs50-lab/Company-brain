@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { encodeOAuthState, getOAuthRedirectUri, getOAuthReturnTo } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +20,10 @@ export async function GET(request: Request) {
       console.warn('Slack Client ID or Redirect URI is missing.');
     }
 
-    const state = Buffer.from(JSON.stringify({ employeeId, orgId })).toString('base64');
+    const state = encodeOAuthState({ employeeId, orgId, returnTo: getOAuthReturnTo(request) });
     
     // Slack bot/user scopes required to scan communications and list channels
-    const scopes = 'channels:read,users:read,channels:history,search:read';
+    const scopes = 'channels:read,users:read,channels:history';
 
     const authUrl = new URL('https://slack.com/oauth/v2/authorize');
     authUrl.searchParams.set('client_id', clientId || '');

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { encodeOAuthState, getOAuthRedirectUri, getOAuthReturnTo } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     );
 
     // Save metadata in OAuth state to process in the callback
-    const state = Buffer.from(JSON.stringify({ employeeId, orgId })).toString('base64');
+    const state = encodeOAuthState({ employeeId, orgId, returnTo: getOAuthReturnTo(request) });
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',

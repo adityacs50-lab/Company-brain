@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { WebClient } from '@slack/web-api';
 import { supabase } from '@/lib/db';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { decodeOAuthState, getOAuthRedirectUri, getPostAuthErrorRedirectUrl, getPostAuthRedirectUrl } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'OAuth code and state parameters are required' }, { status: 400 });
     }
 
-    const { employeeId, orgId } = JSON.parse(Buffer.from(stateBase64, 'base64').toString('utf-8'));
+    const oauthState = decodeOAuthState(stateBase64);
+    const { employeeId, orgId } = oauthState;
 
     const slackClient = new WebClient();
     const result = await slackClient.oauth.v2.access({
@@ -51,13 +52,13 @@ export async function GET(request: Request) {
       throw new Error(`Database Error: ${dbError.message}`);
     }
 
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthRedirectUrl(request, oauthState);
     redirectUrl.searchParams.set('connected', 'slack');
     redirectUrl.searchParams.set('employee', employeeId);
     return NextResponse.redirect(redirectUrl);
   } catch (error: any) {
     console.error('Error in Slack OAuth callback:', error);
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthErrorRedirectUrl(request);
     redirectUrl.searchParams.set('error', 'slack_auth_failed');
     return NextResponse.redirect(redirectUrl);
   }

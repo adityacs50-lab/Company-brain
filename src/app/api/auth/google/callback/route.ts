@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { supabase } from '@/lib/db';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { decodeOAuthState, getOAuthRedirectUri, getPostAuthErrorRedirectUrl, getPostAuthRedirectUrl } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,8 @@ export async function GET(request: Request) {
     }
 
     // Decode employee metadata passed from initiation
-    const { employeeId, orgId } = JSON.parse(Buffer.from(stateBase64, 'base64').toString('utf-8'));
+    const oauthState = decodeOAuthState(stateBase64);
+    const { employeeId, orgId } = oauthState;
 
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -53,13 +54,13 @@ export async function GET(request: Request) {
     }
 
     // Redirect to the Admin sweep dashboard with confirmation parameters
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthRedirectUrl(request, oauthState);
     redirectUrl.searchParams.set('connected', 'gmail');
     redirectUrl.searchParams.set('employee', employeeId);
     return NextResponse.redirect(redirectUrl);
   } catch (error: any) {
     console.error('Error in Google OAuth callback:', error);
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthErrorRedirectUrl(request);
     redirectUrl.searchParams.set('error', 'google_auth_failed');
     return NextResponse.redirect(redirectUrl);
   }

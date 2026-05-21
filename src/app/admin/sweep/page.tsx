@@ -66,9 +66,13 @@ interface SweepStats {
 export default function SweepDashboard() {
   const orgId = 'org_123'; // Hardcoded for YC demo/pitch scope
   const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+  const [frontendBaseUrl, setFrontendBaseUrl] = useState('');
   const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
   const authUrl = (provider: 'google' | 'slack' | 'notion', employeeId: string) => {
     const params = new URLSearchParams({ employee_id: employeeId, org_id: orgId });
+    if (frontendBaseUrl) {
+      params.set('return_to', `${frontendBaseUrl}/admin/sweep`);
+    }
     return apiUrl(`/api/auth/${provider}?${params.toString()}`);
   };
   const [activeTab, setActiveTab] = useState<'connect' | 'sweep' | 'dedup' | 'verify'>('connect');
@@ -109,6 +113,10 @@ export default function SweepDashboard() {
 
   // Scrolling reference for console window
   const consoleBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setFrontendBaseUrl(window.location.origin);
+  }, []);
 
   // 1. Fetch employees
   const fetchEmployees = async () => {

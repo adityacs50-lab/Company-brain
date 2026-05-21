@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/db';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { decodeOAuthState, getOAuthRedirectUri, getPostAuthErrorRedirectUrl, getPostAuthRedirectUrl } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'OAuth code and state parameters are required' }, { status: 400 });
     }
 
-    const { employeeId, orgId } = JSON.parse(Buffer.from(stateBase64, 'base64').toString('utf-8'));
+    const oauthState = decodeOAuthState(stateBase64);
+    const { employeeId, orgId } = oauthState;
 
     const clientId = process.env.NOTION_CLIENT_ID || '';
     const clientSecret = process.env.NOTION_CLIENT_SECRET || '';
@@ -66,13 +67,13 @@ export async function GET(request: Request) {
       throw new Error(`Database Error: ${dbError.message}`);
     }
 
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthRedirectUrl(request, oauthState);
     redirectUrl.searchParams.set('connected', 'notion');
     redirectUrl.searchParams.set('employee', employeeId);
     return NextResponse.redirect(redirectUrl);
   } catch (error: any) {
     console.error('Error in Notion OAuth callback:', error);
-    const redirectUrl = new URL('/admin/sweep', request.url);
+    const redirectUrl = getPostAuthErrorRedirectUrl(request);
     redirectUrl.searchParams.set('error', 'notion_auth_failed');
     return NextResponse.redirect(redirectUrl);
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+import { encodeOAuthState, getOAuthRedirectUri, getOAuthReturnTo } from '@/lib/oauthRedirects';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       console.warn('Notion Client ID or Redirect URI is missing.');
     }
 
-    const state = Buffer.from(JSON.stringify({ employeeId, orgId })).toString('base64');
+    const state = encodeOAuthState({ employeeId, orgId, returnTo: getOAuthReturnTo(request) });
 
     const authUrl = new URL('https://api.notion.com/v1/oauth/authorize');
     authUrl.searchParams.set('client_id', clientId || '');
