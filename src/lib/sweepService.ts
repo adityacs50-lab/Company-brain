@@ -1,7 +1,6 @@
 import { google } from 'googleapis';
 import { WebClient } from '@slack/web-api';
 import { Client as NotionClient } from '@notionhq/client';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import { supabase } from './db';
 import { extractSkillsFromSources } from './groq';
 
@@ -29,7 +28,6 @@ const EXTRACTION_BATCH_SIZE = 8;
 const GOOGLE_DOC_MIME_TYPE = 'application/vnd.google-apps.document';
 const GOOGLE_SHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet';
 const GOOGLE_SLIDES_MIME_TYPE = 'application/vnd.google-apps.presentation';
-const PDF_MIME_TYPE = 'application/pdf';
 const TEXT_MIME_TYPES = new Set([
   'text/plain',
   'text/markdown',
@@ -75,32 +73,8 @@ function isDriveTextCandidate(file: { name?: string | null; mimeType?: string | 
   return (
     EXPORTABLE_TEXT_MIME_TYPES.has(mimeType) ||
     TEXT_MIME_TYPES.has(mimeType) ||
-    mimeType === PDF_MIME_TYPE ||
-    /\.(txt|md|csv|tsv|json|html|xml|pdf|doc|docx|ppt|pptx|xls|xlsx)$/i.test(name)
+    /\.(txt|md|csv|tsv|json|html|xml|doc|docx|ppt|pptx|xls|xlsx)$/i.test(name)
   );
-}
-
-async function extractPdfText(pdfBuffer: Buffer) {
-  const pdfDocument = await pdfjsLib.getDocument({
-    data: new Uint8Array(pdfBuffer),
-    disableWorker: true,
-  } as any).promise;
-
-  const pageTexts: string[] = [];
-
-  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
-    const page = await pdfDocument.getPage(pageNumber);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item: any) => ('str' in item ? item.str : ''))
-      .join(' ');
-    pageTexts.push(pageText);
-    page.cleanup();
-  }
-
-  await pdfDocument.destroy();
-
-  return pageTexts.join('\n\n');
 }
 
 /**
@@ -339,9 +313,8 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
 
           const files = (fileList.data.files || []).filter(isDriveTextCandidate);
           const googleDocCount = files.filter(file => file.mimeType === GOOGLE_DOC_MIME_TYPE).length;
-          const pdfCount = files.filter(file => file.mimeType === PDF_MIME_TYPE).length;
-          const otherDocCount = files.length - googleDocCount - pdfCount;
-          logStatus(orgId, `Drive: Found ${googleDocCount} Google Docs, ${pdfCount} PDFs, and ${otherDocCount} other readable files to scan.`);
+          const otherDocCount = files.length - googleDocCount;
+          logStatus(orgId, `Drive: Found ${googleDocCount} Google Docs and ${otherDocCount} other readable files to scan.`);
 
           for (const file of files) {
             if (!file.id || !file.name) continue;
@@ -360,14 +333,6 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
                 content = docRes.data as string;
                 title = `Google Doc: ${file.name}`;
                 sourceUrl = file.webViewLink || `https://docs.google.com/document/d/${file.id}/edit`;
-              } else if (file.mimeType === PDF_MIME_TYPE) {
-                const pdfRes = await drive.files.get(
-                  { fileId: file.id, alt: 'media' },
-                  { responseType: 'arraybuffer' }
-                );
-                const pdfBuffer = Buffer.from(pdfRes.data as ArrayBuffer);
-                content = await extractPdfText(pdfBuffer);
-                title = `PDF: ${file.name}`;
               } else if (EXPORTABLE_TEXT_MIME_TYPES.has(file.mimeType || '')) {
                 const exportRes = await drive.files.export({
                   fileId: file.id,
