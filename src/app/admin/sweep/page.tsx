@@ -44,6 +44,10 @@ interface Skill {
   source_employees: {
     employee_ids: string[];
     frequency: number;
+    sources?: {
+      title: string;
+      url?: string;
+    }[];
   };
   confidence: number;
   verified_by_human: boolean;
@@ -676,20 +680,16 @@ export default function SweepDashboard() {
                       Cosine Similarity Clustering
                     </h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                      Compares text vectors mathematically. When text fragments like A: <em>&quot;refunds under $50 auto-approve&quot;</em> and B: <em>&quot;approve refunds less than $50&quot;</em> map within 0.85 cosine range, the orchestrator triggers Groq (Llama-3.3-70B-Versatile) to resolve the nuance, generating a clean combined workflow and weighting employee confidence frequencies.
+                      Compares text vectors mathematically. When text fragments like A: <em>&quot;refunds under $50 auto-approve&quot;</em> and B: <em>&quot;approve refunds less than $50&quot;</em> map within 0.85 cosine range, the orchestrator triggers Groq (Llama-3.3-70B-Versatile) to resolve the nuance and generate a clean combined workflow.
                     </p>
                   </div>
 
                   <div style={{ border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
                     <h4 style={{ fontWeight: '600', marginBottom: '0.5rem', fontSize: '1rem', color: '#8B5CF6' }}>
-                      Confidence Metric Scoring
+                      Source Traceability
                     </h4>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                      Confidence represents the frequency of contributors mapping to a specific skill. 
-                      <div style={{ margin: '0.5rem 0', padding: '0.4rem', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontFamily: 'monospace', color: '#60A5FA', fontSize: '0.7rem', textAlign: 'center' }}>
-                        Confidence Score = (Unique Employees Mentioning Procedure) / (Total Connected Employees)
-                      </div>
-                      High confidence (0.8 - 1.0) means it is a standard business policy; low confidence (0.1 - 0.2) means it is an edge-case rule mentioned by one person.
+                      Each extracted skill keeps references to the email, document, Slack message, or Notion page that produced it, so reviewers can inspect the original context before approval.
                     </div>
                   </div>
                 </div>
@@ -734,6 +734,7 @@ export default function SweepDashboard() {
                     const contributorNames = skill.source_employees?.employee_ids
                       ?.map(empId => employees.find(e => e.employee_id === empId)?.name || empId)
                       || [];
+                    const sourceLinks = skill.source_employees?.sources || [];
                     
                     return (
                       <div key={skill.id} className="skill-card">
@@ -745,9 +746,6 @@ export default function SweepDashboard() {
                           </div>
                           
                           <div className="badge-row">
-                            <span className="badge-confidence" title="Confidence = Frequency / Total Connected Employees">
-                              CONFIDENCE: {Math.round(skill.confidence * 100)}%
-                            </span>
                             {skill.verified_by_human && (
                               <span className="badge-approved">
                                 COMPANY APPROVED
@@ -780,6 +778,30 @@ export default function SweepDashboard() {
                                 @{name}
                               </span>
                             ))}
+                            {sourceLinks.length > 0 && (
+                              <>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0.25rem 0 0.75rem' }}>SOURCES:</span>
+                                {sourceLinks.slice(0, 3).map((source, sIdx) => (
+                                  source.url ? (
+                                    <a
+                                      key={`${source.url}-${sIdx}`}
+                                      className="avatar-badge"
+                                      href={source.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={source.title}
+                                      style={{ textDecoration: 'none' }}
+                                    >
+                                      Source {sIdx + 1}
+                                    </a>
+                                  ) : (
+                                    <span key={`${source.title}-${sIdx}`} className="avatar-badge" title={source.title}>
+                                      Source {sIdx + 1}
+                                    </span>
+                                  )
+                                ))}
+                              </>
+                            )}
                           </div>
 
                           <button

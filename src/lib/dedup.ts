@@ -9,6 +9,10 @@ export interface SkillItem {
   source_employees: {
     employee_ids: string[];
     frequency: number;
+    sources?: {
+      title: string;
+      url?: string;
+    }[];
   };
   confidence: number;
   verified_by_human: boolean;
@@ -231,9 +235,18 @@ export async function deduplicateSkills(
 
     // Merge employee lists
     const uniqueEmployees = new Set<string>();
+    const uniqueSources = new Map<string, { title: string; url?: string }>();
     for (const skill of groupToMerge) {
       if (skill.source_employees?.employee_ids) {
         skill.source_employees.employee_ids.forEach(empId => uniqueEmployees.add(empId));
+      }
+      if (skill.source_employees?.sources) {
+        skill.source_employees.sources.forEach(source => {
+          const key = source.url || source.title;
+          if (key) {
+            uniqueSources.set(key, source);
+          }
+        });
       }
     }
 
@@ -252,6 +265,7 @@ export async function deduplicateSkills(
       source_employees: {
         employee_ids,
         frequency,
+        sources: Array.from(uniqueSources.values()),
       },
       confidence,
       verified_by_human,

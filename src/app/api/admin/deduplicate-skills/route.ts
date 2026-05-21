@@ -57,6 +57,10 @@ export async function POST(request: Request) {
         }
       }
 
+      if (!Array.isArray(parsedSource.sources)) {
+        parsedSource.sources = [];
+      }
+
       return {
         id: s.id,
         org_id: s.org_id,

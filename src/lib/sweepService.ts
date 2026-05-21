@@ -29,6 +29,7 @@ const EXTRACTION_BATCH_SIZE = 8;
 type IngestedSource = {
   title: string;
   content: string;
+  url?: string;
 };
 
 function chunkArray<T>(items: T[], size: number) {
@@ -149,6 +150,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
 
             // Save to raw sources database
             const title = `Email Thread: ${subject}`;
+            const sourceUrl = `https://mail.google.com/mail/u/0/#all/${t.id}`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
@@ -159,7 +161,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             });
 
             if (!insertErr) {
-              ingestedSources.push({ title, content: body });
+              ingestedSources.push({ title, content: body, url: sourceUrl });
               parsedSourcesCount++;
               sweep.emailsProcessed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -223,6 +225,9 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             const channelName = match.channel?.name ? `#${match.channel.name}` : 'Slack Thread';
 
             const title = `Slack Message (${channelName})`;
+            const sourceUrl = match.channel?.id && extId
+              ? `https://slack.com/app_redirect?channel=${match.channel.id}&message_ts=${extId}`
+              : undefined;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
@@ -233,7 +238,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             });
 
             if (!insertErr) {
-              ingestedSources.push({ title, content });
+              ingestedSources.push({ title, content, url: sourceUrl });
               parsedSourcesCount++;
               sweep.slackMessagesAnalyzed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -273,6 +278,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             const content = docRes.data as string;
             
             const title = `Google Doc: ${file.name}`;
+            const sourceUrl = `https://docs.google.com/document/d/${file.id}/edit`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
@@ -283,7 +289,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             });
 
             if (!insertErr) {
-              ingestedSources.push({ title, content });
+              ingestedSources.push({ title, content, url: sourceUrl });
               parsedSourcesCount++;
               sweep.driveFilesParsed++;
               activeSweeps.set(orgId, { ...sweep });
@@ -342,6 +348,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
               .join('\n');
 
             const title = `Notion Page: ${pageTitle}`;
+            const sourceUrl = pageData.url;
             const content = textBlocks || `Empty content properties. Ref: ${(page as any).url || page.id}`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
@@ -353,7 +360,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             });
 
             if (!insertErr) {
-              ingestedSources.push({ title, content });
+              ingestedSources.push({ title, content, url: sourceUrl });
               parsedSourcesCount++;
               sweep.notionPagesScanned++;
               activeSweeps.set(orgId, { ...sweep });
@@ -376,7 +383,8 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
 
         for (let batchIndex = 0; batchIndex < sourceBatches.length; batchIndex++) {
           logStatus(orgId, `Groq extraction batch ${batchIndex + 1}/${sourceBatches.length} for ${empName}...`);
-          const skillsList = await extractSkillsFromSources(sourceBatches[batchIndex]);
+          const sourceBatch = sourceBatches[batchIndex];
+          const skillsList = await extractSkillsFromSources(sourceBatch);
           
           for (const s of skillsList) {
             // Save skills directly to the brain_skills table
@@ -388,6 +396,10 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
               source_employees: {
                 employee_ids: [empId],
                 frequency: 1,
+                sources: sourceBatch.map((source) => ({
+                  title: source.title,
+                  url: source.url,
+                })),
               },
               confidence: parseFloat((1 / sweep.totalEmployees).toFixed(2)),
               verified_by_human: false,
