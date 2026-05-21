@@ -701,21 +701,32 @@ export default function SweepDashboard() {
             <div className="action-card backdrop-glass">
               <div className="action-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <h2>Company Playbook Review</h2>
-                  <p>Review the workflows the app found. Approve the ones that are accurate enough for future AI agents to use.</p>
+                  <h2>Agent Skills File</h2>
+                  <p>Review the workflows the app found. Approved skills become the step-by-step file AI agents can follow.</p>
                 </div>
                 
                 {/* Search Bar filter */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-                  <Search size={16} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Search workflows..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ paddingLeft: '32px', width: '250px' }}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <a
+                    href={apiUrl(`/api/agent/skills/${orgId}?approved_only=false`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    Open Agent Skills File
+                  </a>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Search workflows..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '32px', width: '250px' }}
+                    />
+                  </div>
                 </div>
               </div>
 
