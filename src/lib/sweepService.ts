@@ -428,14 +428,22 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
         }
 
         if (employeeSkillsExtractedCount === 0 && ingestedSources.length > 0) {
-          const strongestSource = [...ingestedSources].sort((a, b) => b.content.length - a.content.length)[0];
-          const fallbackSteps = strongestSource.content
+          const fallbackCandidates = ingestedSources.filter(source => {
+            const text = `${source.title}\n${source.content}`.toLowerCase();
+            const isRejected = /study guide|syllabus|exam|crash course|career|job-ready|internships?|newsletter|altman|musk|openai|anthropic|mathematics|calculus|linear algebra|probability/.test(text);
+            const isWorkflow = /faq|tasks? in detail|process|steps?|requirements?|must submit|how to|support|approval|policy|form|certificate|screenshot|participants?|presentation|proposal|problem statement/.test(text);
+            return isWorkflow && !isRejected;
+          });
+          const strongestSource = [...fallbackCandidates].sort((a, b) => b.content.length - a.content.length)[0];
+          const fallbackSteps = strongestSource?.content
             .split(/\r?\n/)
             .map(line => line.trim())
+            .map(line => line.replace(/^(\d+[\).\s]|[-*•]\s*)/i, '').trim())
             .filter(line => line.length >= 20 && line.length <= 220)
+            .filter(line => !/^(no|your task|requirements?|important points to remember|definition of|fundamentals and classification)\b/i.test(line))
             .slice(0, 5);
 
-          if (fallbackSteps.length >= 2) {
+          if (strongestSource && fallbackSteps.length >= 2) {
             const { error: fallbackErr } = await supabase.from('brain_skills').insert({
               org_id: orgId,
               skill_name: `review_${strongestSource.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 45) || 'scanned_workflow'}`,

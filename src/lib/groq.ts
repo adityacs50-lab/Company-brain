@@ -32,22 +32,71 @@ function toSkillName(title: string) {
     .slice(0, 60) || 'document_workflow';
 }
 
+function normalizeLine(line: string) {
+  return line
+    .replace(/^(\d+[\).\s]|[-*•]\s*|step\s+\d+\s*[—:-]?\s*)/i, '')
+    .trim();
+}
+
+function isLikelyDemoWorkflowSource(source: SkillExtractionSource) {
+  const text = `${source.title}\n${source.content}`.toLowerCase();
+
+  const rejectPatterns = [
+    /study guide/,
+    /syllabus/,
+    /exam/,
+    /crash course/,
+    /career/,
+    /job-ready/,
+    /internships?/,
+    /newsletter/,
+    /altman|musk|openai|anthropic/,
+    /mathematics|calculus|linear algebra|probability/,
+  ];
+
+  if (rejectPatterns.some(pattern => pattern.test(text))) {
+    return false;
+  }
+
+  const workflowPatterns = [
+    /faq/,
+    /tasks? in detail/,
+    /process/,
+    /steps?/,
+    /requirements?/,
+    /must submit/,
+    /how to/,
+    /support/,
+    /approval/,
+    /policy/,
+    /form/,
+    /certificate/,
+    /screenshot/,
+    /participants?/,
+    /presentation/,
+    /proposal/,
+    /problem statement/,
+  ];
+
+  return workflowPatterns.some(pattern => pattern.test(text));
+}
+
 function extractUsefulLines(content: string) {
   return content
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean)
+    .map(normalizeLine)
     .filter(line => {
       if (line.length < 12 || line.length > 220) return false;
-      if (/^(no|your task|requirements?|important points to remember)\b/i.test(line)) return false;
-      return /^(\d+[\).\s]|[-*•]|step\s+\d+|q\d+|answer:|important|requirement|must|submit|complete|check|review|share|post|send|open|visit|use|wait|fill|upload|approve|confirm)/i.test(line);
+      if (/^(no|your task|requirements?|important points to remember|fundamentals and classification|definition of|dṛṣṭi|paramparā|laukika|ancient and continuous|holistic|experience-based|interdisciplinary)\b/i.test(line)) return false;
+      return /^(q\d+|answer:|important|requirement|must|submit|complete|check|review|share|post|send|open|visit|use|wait|fill|upload|approve|confirm|take|join|contact|access|provide|record|invite|schedule|certificate|support|session|minimum|each|after|before|where|when|how|can|will|what|if)/i.test(line);
     })
-    .map(line => line.replace(/^(\d+[\).\s]|[-*•]\s*|step\s+\d+\s*[—:-]?\s*)/i, '').trim())
     .filter(Boolean);
 }
 
 function extractFallbackSkills(sources: SkillExtractionSource[]): ExtractedSkill[] {
-  return sources.flatMap(source => {
+  return sources.filter(isLikelyDemoWorkflowSource).flatMap(source => {
     const steps = Array.from(new Set(extractUsefulLines(source.content))).slice(0, 8);
 
     if (steps.length < 2) {
@@ -76,7 +125,9 @@ export async function extractSkillsFromSources(sources: SkillExtractionSource[])
     }))
     .filter((source) => source.content.length >= 10);
 
-  if (usableSources.length === 0) {
+  const workflowSources = usableSources.filter(isLikelyDemoWorkflowSource);
+
+  if (workflowSources.length === 0) {
     return [];
   }
 
@@ -107,7 +158,7 @@ Important Guidelines:
 - If the communication contains no procedures or workflows, return an empty "skills" array: {"skills": []}.
 - Respond ONLY with valid JSON. Do not include markdown code block formatting or preambles outside the JSON.`;
 
-    const sourceText = usableSources
+    const sourceText = workflowSources
       .map((source, index) => {
         const trimmedContent = source.content.slice(0, 4000);
         return `SOURCE ${index + 1}: ${source.title}\n${trimmedContent}`;
@@ -133,10 +184,10 @@ Important Guidelines:
     if (data && Array.isArray(data.skills) && data.skills.length > 0) {
       return data.skills as ExtractedSkill[];
     }
-    return extractFallbackSkills(usableSources);
+    return extractFallbackSkills(workflowSources);
   } catch (error: any) {
     console.error('Error in Groq skill extraction:', error?.message || error);
-    return extractFallbackSkills(usableSources);
+    return extractFallbackSkills(workflowSources);
   }
 }
 

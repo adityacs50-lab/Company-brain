@@ -732,6 +732,13 @@ export default function SweepDashboard() {
                       ?.map(empId => employees.find(e => e.employee_id === empId)?.name || empId)
                       || [];
                     const sourceLinks = skill.source_employees?.sources || [];
+                    const formatSourceLabel = (title: string, index: number) => {
+                      const cleanTitle = (title || `Source ${index + 1}`)
+                        .replace(/^(Email Thread|Google Doc|Slack Message|Notion Page):\s*/i, '')
+                        .trim();
+
+                      return cleanTitle.length > 24 ? `${cleanTitle.slice(0, 24)}...` : cleanTitle;
+                    };
                     
                     return (
                       <div key={skill.id} className="skill-card">
@@ -789,11 +796,11 @@ export default function SweepDashboard() {
                                       title={source.title}
                                       style={{ textDecoration: 'none' }}
                                     >
-                                      Source {sIdx + 1}
+                                      {formatSourceLabel(source.title, sIdx)}
                                     </a>
                                   ) : (
                                     <span key={`${source.title}-${sIdx}`} className="avatar-badge" title={source.title}>
-                                      Source {sIdx + 1}
+                                      {formatSourceLabel(source.title, sIdx)}
                                     </span>
                                   )
                                 ))}
