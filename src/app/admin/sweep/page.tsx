@@ -66,9 +66,10 @@ interface SweepStats {
 export default function SweepDashboard() {
   const orgId = 'org_123'; // Hardcoded for YC demo/pitch scope
   const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+  const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
   const authUrl = (provider: 'google' | 'slack' | 'notion', employeeId: string) => {
     const params = new URLSearchParams({ employee_id: employeeId, org_id: orgId });
-    return `${apiBaseUrl}/api/auth/${provider}?${params.toString()}`;
+    return apiUrl(`/api/auth/${provider}?${params.toString()}`);
   };
   const [activeTab, setActiveTab] = useState<'connect' | 'sweep' | 'dedup' | 'verify'>('connect');
   
@@ -112,7 +113,7 @@ export default function SweepDashboard() {
   // 1. Fetch employees
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`/api/admin/employees?org_id=${orgId}`);
+      const res = await fetch(apiUrl(`/api/admin/employees?org_id=${orgId}`));
       const data = await res.json();
       if (data.employees) {
         setEmployees(data.employees);
@@ -130,7 +131,7 @@ export default function SweepDashboard() {
   // 2. Fetch skills
   const fetchSkills = async () => {
     try {
-      const res = await fetch(`/api/skills/${orgId}/deduped`);
+      const res = await fetch(apiUrl(`/api/skills/${orgId}/deduped`));
       const data = await res.json();
       if (data.skills) {
         setSkills(data.skills);
@@ -152,7 +153,7 @@ export default function SweepDashboard() {
     if (isSweeping) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`/api/admin/sweep-status/${orgId}`);
+          const res = await fetch(apiUrl(`/api/admin/sweep-status/${orgId}`));
           const statusData: SweepStats = await res.json();
           setSweepStatus(statusData);
 
@@ -211,7 +212,7 @@ export default function SweepDashboard() {
     }));
 
     try {
-      const res = await fetch('/api/admin/sweep-org', {
+      const res = await fetch(apiUrl('/api/admin/sweep-org'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -238,7 +239,7 @@ export default function SweepDashboard() {
   const handleTriggerDeduplication = async () => {
     setDedupLoading(true);
     try {
-      const res = await fetch('/api/admin/deduplicate-skills', {
+      const res = await fetch(apiUrl('/api/admin/deduplicate-skills'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ org_id: orgId }),
@@ -266,7 +267,7 @@ export default function SweepDashboard() {
   // Verify and approve individual skills
   const handleToggleSkillVerification = async (skillId: string, currentStatus: boolean) => {
     try {
-      const res = await fetch('/api/skills/verify', {
+      const res = await fetch(apiUrl('/api/skills/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,7 +295,7 @@ export default function SweepDashboard() {
     }
 
     try {
-      const res = await fetch('/api/admin/employees', {
+      const res = await fetch(apiUrl('/api/admin/employees'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
