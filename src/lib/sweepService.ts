@@ -27,7 +27,30 @@ export const activeSweeps = new Map<string, SweepStatus>();
 const searchKeywords = "refund OR policy OR approval OR exception OR decision OR rule OR process OR escalat*";
 const EXTRACTION_BATCH_SIZE = 8;
 const GOOGLE_DOC_MIME_TYPE = 'application/vnd.google-apps.document';
+const GOOGLE_SHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet';
+const GOOGLE_SLIDES_MIME_TYPE = 'application/vnd.google-apps.presentation';
 const PDF_MIME_TYPE = 'application/pdf';
+const TEXT_MIME_TYPES = new Set([
+  'text/plain',
+  'text/markdown',
+  'text/csv',
+  'text/tab-separated-values',
+  'text/html',
+  'application/json',
+  'application/xml',
+  'text/xml',
+]);
+const EXPORTABLE_TEXT_MIME_TYPES = new Set([
+  GOOGLE_DOC_MIME_TYPE,
+  GOOGLE_SHEET_MIME_TYPE,
+  GOOGLE_SLIDES_MIME_TYPE,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+]);
 
 type IngestedSource = {
   title: string;
@@ -43,6 +66,18 @@ function chunkArray<T>(items: T[], size: number) {
   }
 
   return chunks;
+}
+
+function isDriveTextCandidate(file: { name?: string | null; mimeType?: string | null }) {
+  const mimeType = file.mimeType || '';
+  const name = (file.name || '').toLowerCase();
+
+  return (
+    EXPORTABLE_TEXT_MIME_TYPES.has(mimeType) ||
+    TEXT_MIME_TYPES.has(mimeType) ||
+    mimeType === PDF_MIME_TYPE ||
+    /\.(txt|md|csv|tsv|json|html|xml|pdf|doc|docx|ppt|pptx|xls|xlsx)$/i.test(name)
+  );
 }
 
 /**
@@ -273,16 +308,17 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
           const drive = google.drive({ version: 'v3', auth });
 
           const fileList = await drive.files.list({
-            q: `(mimeType = '${GOOGLE_DOC_MIME_TYPE}' or mimeType = '${PDF_MIME_TYPE}') and trashed = false`,
+            q: 'trashed = false',
             pageSize: 50,
             fields: 'files(id, name, mimeType, webViewLink)',
             orderBy: 'modifiedTime desc',
           });
 
-          const files = fileList.data.files || [];
+          const files = (fileList.data.files || []).filter(isDriveTextCandidate);
           const googleDocCount = files.filter(file => file.mimeType === GOOGLE_DOC_MIME_TYPE).length;
           const pdfCount = files.filter(file => file.mimeType === PDF_MIME_TYPE).length;
-          logStatus(orgId, `Drive: Found ${googleDocCount} Google Docs and ${pdfCount} PDFs to scan.`);
+          const otherDocCount = files.length - googleDocCount - pdfCount;
+          logStatus(orgId, `Drive: Found ${googleDocCount} Google Docs, ${pdfCount} PDFs, and ${otherDocCount} other readable files to scan.`);
 
           for (const file of files) {
             if (!file.id || !file.name) continue;
@@ -312,7 +348,22 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
                 await pdf.destroy();
                 content = parsedPdf.text;
                 title = `PDF: ${file.name}`;
+              } else if (EXPORTABLE_TEXT_MIME_TYPES.has(file.mimeType || '')) {
+                const exportRes = await drive.files.export({
+                  fileId: file.id,
+                  mimeType: 'text/plain',
+                });
+                content = exportRes.data as string;
+                title = `Drive File: ${file.name}`;
+              } else if (TEXT_MIME_TYPES.has(file.mimeType || '') || /\.(txt|md|csv|tsv|json|html|xml)$/i.test(file.name || '')) {
+                const textRes = await drive.files.get(
+                  { fileId: file.id, alt: 'media' },
+                  { responseType: 'text' }
+                );
+                content = String(textRes.data);
+                title = `Drive File: ${file.name}`;
               } else {
+                logStatus(orgId, `Drive: Skipping ${file.name} because this file type cannot be converted to text yet.`);
                 continue;
               }
             } catch (fileErr: any) {
