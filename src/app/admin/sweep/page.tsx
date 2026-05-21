@@ -377,9 +377,6 @@ export default function SweepDashboard() {
       <nav className="dashboard-nav">
         <Link href="/" className="nav-brand">
           <span className="text-gradient">Company Brain</span>
-          <span style={{ fontSize: '0.65rem', background: 'rgba(37,99,235,0.15)', color: '#60A5FA', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-            YC PITCH v1.0
-          </span>
         </Link>
         <div className="nav-actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
