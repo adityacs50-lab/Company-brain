@@ -76,17 +76,16 @@ export async function POST(request: Request) {
     const dedupedCount = dedupedSkills.length;
     const duplicatesFound = originalCount - dedupedCount;
 
-    // 5. Delete all old records to replace with the newly consolidated ones
-    const { error: deleteErr } = await supabase
-      .from('brain_skills')
-      .delete()
-      .eq('org_id', org_id);
-
-    if (deleteErr) {
-      throw deleteErr;
+    if (originalCount > 0 && dedupedCount === 0) {
+      throw new Error('Deduplication produced zero skills from non-empty input. Existing skills were preserved.');
     }
 
-    // 6. Bulk insert the deduped skills
+    const oldSkillIds = (rawSkills || [])
+      .map((skill) => skill.id)
+      .filter(Boolean);
+
+    // 5. Insert consolidated skills first. Only delete old rows after this succeeds.
+    let insertedCount = 0;
     if (dedupedSkills.length > 0) {
       const dbInsertions = dedupedSkills.map(s => ({
         org_id: s.org_id,
@@ -98,12 +97,31 @@ export async function POST(request: Request) {
         verified_by_human: s.verified_by_human,
       }));
 
-      const { error: insertErr } = await supabase
+      const { data: insertedSkills, error: insertErr } = await supabase
         .from('brain_skills')
-        .insert(dbInsertions);
+        .insert(dbInsertions)
+        .select('id');
 
       if (insertErr) {
         throw insertErr;
+      }
+
+      insertedCount = insertedSkills?.length || 0;
+
+      if (insertedCount !== dedupedSkills.length) {
+        throw new Error(`Expected to insert ${dedupedSkills.length} deduped skills, but inserted ${insertedCount}. Existing skills were preserved.`);
+      }
+    }
+
+    // 6. Delete only the pre-deduplication rows now that replacement rows exist.
+    if (oldSkillIds.length > 0) {
+      const { error: deleteErr } = await supabase
+        .from('brain_skills')
+        .delete()
+        .in('id', oldSkillIds);
+
+      if (deleteErr) {
+        throw deleteErr;
       }
     }
 
@@ -112,6 +130,7 @@ export async function POST(request: Request) {
       message: 'Skills deduplication completed successfully.',
       originalCount,
       dedupedCount,
+      insertedCount,
       duplicatesFound: duplicatesFound >= 0 ? duplicatesFound : 0,
     });
   } catch (error: any) {

@@ -402,6 +402,17 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
         }
         
         logStatus(orgId, `Extracted ${employeeSkillsExtractedCount} raw skills for ${empName}.`);
+
+        const { count: storedSkillCount, error: countErr } = await supabase
+          .from('brain_skills')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', orgId);
+
+        if (countErr) {
+          logStatus(orgId, `Warning: Could not verify stored skill count: ${countErr.message}`);
+        } else {
+          logStatus(orgId, `Verified ${storedSkillCount || 0} skills currently stored in Supabase for this org.`);
+        }
       }
 
       sweep.employeesProcessed++;
