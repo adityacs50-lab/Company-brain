@@ -125,7 +125,7 @@ export default function SweepDashboard() {
   // 1. Fetch employees
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(apiUrl(`/api/admin/employees?org_id=${orgId}`));
+      const res = await fetch(apiUrl(`/api/admin/employees?org_id=${orgId}`), { cache: 'no-store' });
       const data = await res.json();
       if (data.employees) {
         setEmployees(data.employees);
@@ -143,7 +143,7 @@ export default function SweepDashboard() {
   // 2. Fetch skills
   const fetchSkills = async () => {
     try {
-      const res = await fetch(apiUrl(`/api/skills/${orgId}/deduped`));
+      const res = await fetch(apiUrl(`/api/skills/${orgId}/deduped?t=${Date.now()}`), { cache: 'no-store' });
       const data = await res.json();
       if (data.skills) {
         setSkills(data.skills);
@@ -179,7 +179,7 @@ export default function SweepDashboard() {
     if (isSweeping) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(apiUrl(`/api/admin/sweep-status/${orgId}`));
+          const res = await fetch(apiUrl(`/api/admin/sweep-status/${orgId}?t=${Date.now()}`), { cache: 'no-store' });
           const statusData: SweepStats = await res.json();
           setSweepStatus(statusData);
 
