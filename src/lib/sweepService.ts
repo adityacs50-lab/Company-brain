@@ -198,10 +198,22 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
             // Loop through top channels
             for (const channel of channels.slice(0, 5)) { // limit channels to prevent timeouts
               if (!channel.id) continue;
-              const history = await slackClient.conversations.history({
-                channel: channel.id,
-                limit: 100,
-              });
+              let history;
+              try {
+                await slackClient.conversations.join({ channel: channel.id });
+              } catch (joinErr) {
+                // Some channels cannot be joined by the bot; try reading anyway.
+              }
+
+              try {
+                history = await slackClient.conversations.history({
+                  channel: channel.id,
+                  limit: 100,
+                });
+              } catch (historyErr: any) {
+                logStatus(orgId, `Slack: Skipping #${channel.name || channel.id} (${historyErr.data?.error || historyErr.message || 'could not read channel'}).`);
+                continue;
+              }
               
               const messages = history.messages || [];
               const keywordRegex = /refund|policy|approval|exception|decision|rule|process|escalat/i;
