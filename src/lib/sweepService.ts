@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import { WebClient } from '@slack/web-api';
 import { Client as NotionClient } from '@notionhq/client';
-import { PDFParse } from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import { supabase } from './db';
 import { extractSkillsFromSources } from './groq';
 
@@ -78,6 +78,29 @@ function isDriveTextCandidate(file: { name?: string | null; mimeType?: string | 
     mimeType === PDF_MIME_TYPE ||
     /\.(txt|md|csv|tsv|json|html|xml|pdf|doc|docx|ppt|pptx|xls|xlsx)$/i.test(name)
   );
+}
+
+async function extractPdfText(pdfBuffer: Buffer) {
+  const pdfDocument = await pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    disableWorker: true,
+  } as any).promise;
+
+  const pageTexts: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+    const page = await pdfDocument.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => ('str' in item ? item.str : ''))
+      .join(' ');
+    pageTexts.push(pageText);
+    page.cleanup();
+  }
+
+  await pdfDocument.destroy();
+
+  return pageTexts.join('\n\n');
 }
 
 /**
@@ -343,10 +366,7 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
                   { responseType: 'arraybuffer' }
                 );
                 const pdfBuffer = Buffer.from(pdfRes.data as ArrayBuffer);
-                const pdf = new PDFParse({ data: pdfBuffer });
-                const parsedPdf = await pdf.getText();
-                await pdf.destroy();
-                content = parsedPdf.text;
+                content = await extractPdfText(pdfBuffer);
                 title = `PDF: ${file.name}`;
               } else if (EXPORTABLE_TEXT_MIME_TYPES.has(file.mimeType || '')) {
                 const exportRes = await drive.files.export({
