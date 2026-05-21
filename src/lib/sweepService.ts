@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { WebClient } from '@slack/web-api';
 import { Client as NotionClient } from '@notionhq/client';
+import { PDFParse } from 'pdf-parse';
 import { supabase } from './db';
 import { extractSkillsFromSources } from './groq';
 
@@ -25,6 +26,8 @@ export const activeSweeps = new Map<string, SweepStatus>();
 
 const searchKeywords = "refund OR policy OR approval OR exception OR decision OR rule OR process OR escalat*";
 const EXTRACTION_BATCH_SIZE = 8;
+const GOOGLE_DOC_MIME_TYPE = 'application/vnd.google-apps.document';
+const PDF_MIME_TYPE = 'application/pdf';
 
 type IngestedSource = {
   title: string;
@@ -270,27 +273,58 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
           const drive = google.drive({ version: 'v3', auth });
 
           const fileList = await drive.files.list({
-            q: "mimeType = 'application/vnd.google-apps.document'",
-            pageSize: 10,
-            fields: 'files(id, name)',
+            q: `(mimeType = '${GOOGLE_DOC_MIME_TYPE}' or mimeType = '${PDF_MIME_TYPE}') and trashed = false`,
+            pageSize: 50,
+            fields: 'files(id, name, mimeType, webViewLink)',
+            orderBy: 'modifiedTime desc',
           });
 
           const files = fileList.data.files || [];
-          logStatus(orgId, `Drive: Found ${files.length} Google Documents to scan.`);
+          const googleDocCount = files.filter(file => file.mimeType === GOOGLE_DOC_MIME_TYPE).length;
+          const pdfCount = files.filter(file => file.mimeType === PDF_MIME_TYPE).length;
+          logStatus(orgId, `Drive: Found ${googleDocCount} Google Docs and ${pdfCount} PDFs to scan.`);
 
           for (const file of files) {
             if (!file.id || !file.name) continue;
-            
-            // Export document content as plain text
-            const docRes = await drive.files.export({
-              fileId: file.id,
-              mimeType: 'text/plain',
-            });
 
-            const content = docRes.data as string;
+            let content = '';
+            let title = '';
+            let sourceUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+
+            try {
+              if (file.mimeType === GOOGLE_DOC_MIME_TYPE) {
+                const docRes = await drive.files.export({
+                  fileId: file.id,
+                  mimeType: 'text/plain',
+                });
+
+                content = docRes.data as string;
+                title = `Google Doc: ${file.name}`;
+                sourceUrl = file.webViewLink || `https://docs.google.com/document/d/${file.id}/edit`;
+              } else if (file.mimeType === PDF_MIME_TYPE) {
+                const pdfRes = await drive.files.get(
+                  { fileId: file.id, alt: 'media' },
+                  { responseType: 'arraybuffer' }
+                );
+                const pdfBuffer = Buffer.from(pdfRes.data as ArrayBuffer);
+                const pdf = new PDFParse({ data: pdfBuffer });
+                const parsedPdf = await pdf.getText();
+                await pdf.destroy();
+                content = parsedPdf.text;
+                title = `PDF: ${file.name}`;
+              } else {
+                continue;
+              }
+            } catch (fileErr: any) {
+              logStatus(orgId, `Drive: Could not read ${file.name}: ${fileErr.message || fileErr}`);
+              continue;
+            }
+
+            if (!content || content.trim().length < 20) {
+              logStatus(orgId, `Drive: Skipping ${file.name} because no readable text was found.`);
+              continue;
+            }
             
-            const title = `Google Doc: ${file.name}`;
-            const sourceUrl = `https://docs.google.com/document/d/${file.id}/edit`;
             const { error: insertErr } = await supabase.from('brain_sources').insert({
               org_id: orgId,
               employee_id: empId,
