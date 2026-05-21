@@ -421,7 +421,48 @@ export async function runOrgSweep(orgId: string, employeeIdsToInclude: string[])
               employeeSkillsExtractedCount++;
               sweep.rawSkillsExtracted++;
               activeSweeps.set(orgId, { ...sweep });
+            } else {
+              logStatus(orgId, `Could not save skill "${s.skill_name}": ${insertSkillErr.message}`);
             }
+          }
+        }
+
+        if (employeeSkillsExtractedCount === 0 && ingestedSources.length > 0) {
+          const strongestSource = [...ingestedSources].sort((a, b) => b.content.length - a.content.length)[0];
+          const fallbackSteps = strongestSource.content
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(line => line.length >= 20 && line.length <= 220)
+            .slice(0, 5);
+
+          if (fallbackSteps.length >= 2) {
+            const { error: fallbackErr } = await supabase.from('brain_skills').insert({
+              org_id: orgId,
+              skill_name: `review_${strongestSource.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 45) || 'scanned_workflow'}`,
+              trigger: `Review the process described in ${strongestSource.title}`,
+              steps: fallbackSteps,
+              source_employees: {
+                employee_ids: [empId],
+                frequency: 1,
+                sources: [{
+                  title: strongestSource.title,
+                  url: strongestSource.url,
+                }],
+              },
+              confidence: parseFloat((1 / sweep.totalEmployees).toFixed(2)),
+              verified_by_human: false,
+            });
+
+            if (fallbackErr) {
+              logStatus(orgId, `No workflows were saved from ${ingestedSources.length} scanned sources. Fallback save also failed: ${fallbackErr.message}`);
+            } else {
+              employeeSkillsExtractedCount++;
+              sweep.rawSkillsExtracted++;
+              activeSweeps.set(orgId, { ...sweep });
+              logStatus(orgId, `Saved 1 review-ready fallback skill so the scan has a visible result.`);
+            }
+          } else {
+            logStatus(orgId, `No workflows were saved from ${ingestedSources.length} scanned sources because the scanned text did not contain enough usable step-by-step content.`);
           }
         }
         
