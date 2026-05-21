@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { WebClient } from '@slack/web-api';
 import { supabase } from '@/lib/db';
+import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +22,7 @@ export async function GET(request: Request) {
       client_id: process.env.SLACK_CLIENT_ID || '',
       client_secret: process.env.SLACK_CLIENT_SECRET || '',
       code: code,
-      redirect_uri: process.env.SLACK_REDIRECT_URI || '',
+      redirect_uri: getOAuthRedirectUri('slack', request),
     });
 
     if (!result.ok) {

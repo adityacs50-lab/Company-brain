@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/db';
+import { getOAuthRedirectUri } from '@/lib/oauthRedirects';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +18,7 @@ export async function GET(request: Request) {
 
     const clientId = process.env.NOTION_CLIENT_ID || '';
     const clientSecret = process.env.NOTION_CLIENT_SECRET || '';
-    const redirectUri = process.env.NOTION_REDIRECT_URI || '';
+    const redirectUri = getOAuthRedirectUri('notion', request);
 
     // Notion requires standard HTTP Basic Auth header for token exchange
     const authorizationHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');

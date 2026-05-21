@@ -65,6 +65,11 @@ interface SweepStats {
 
 export default function SweepDashboard() {
   const orgId = 'org_123'; // Hardcoded for YC demo/pitch scope
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+  const authUrl = (provider: 'google' | 'slack' | 'notion', employeeId: string) => {
+    const params = new URLSearchParams({ employee_id: employeeId, org_id: orgId });
+    return `${apiBaseUrl}/api/auth/${provider}?${params.toString()}`;
+  };
   const [activeTab, setActiveTab] = useState<'connect' | 'sweep' | 'dedup' | 'verify'>('connect');
   
   // Data states
@@ -412,7 +417,7 @@ export default function SweepDashboard() {
                           <span className="source-badge connected" title="Gmail & Drive API Connected">GOOGLE</span>
                         ) : (
                           <Link 
-                            href={`/api/auth/google?employee_id=${emp.employee_id}&org_id=${orgId}`}
+                            href={authUrl('google', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
                             title="Connect Gmail & Google Drive OAuth"
@@ -426,7 +431,7 @@ export default function SweepDashboard() {
                           <span className="source-badge connected" title="Slack API Connected">SLACK</span>
                         ) : (
                           <Link 
-                            href={`/api/auth/slack?employee_id=${emp.employee_id}&org_id=${orgId}`}
+                            href={authUrl('slack', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
                             title="Connect Slack Workspace OAuth"
@@ -440,7 +445,7 @@ export default function SweepDashboard() {
                           <span className="source-badge connected" title="Notion API Connected">NOTION</span>
                         ) : (
                           <Link 
-                            href={`/api/auth/notion?employee_id=${emp.employee_id}&org_id=${orgId}`}
+                            href={authUrl('notion', emp.employee_id)}
                             className="source-badge" 
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
                             title="Connect Notion Workspace OAuth"
