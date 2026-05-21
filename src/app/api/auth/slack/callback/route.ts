@@ -36,20 +36,25 @@ export async function GET(request: Request) {
       throw new Error('No access token was returned by Slack');
     }
 
-    // Upsert the Slack token in Supabase
-    const { error: dbError } = await supabase.from('brain_employees').upsert(
-      {
-        org_id: orgId,
-        employee_id: employeeId,
+    // Store the Slack token on the existing employee profile.
+    const { data: updatedEmployee, error: dbError } = await supabase
+      .from('brain_employees')
+      .update({
         slack_token: slackToken,
         last_synced: new Date().toISOString(),
-      },
-      { onConflict: 'employee_id' }
-    );
+      })
+      .eq('org_id', orgId)
+      .eq('employee_id', employeeId)
+      .select('employee_id')
+      .single();
 
     if (dbError) {
       console.error('Database Error storing Slack tokens:', dbError);
       throw new Error(`Database Error: ${dbError.message}`);
+    }
+
+    if (!updatedEmployee) {
+      throw new Error(`No employee profile found for ${employeeId}. Create the employee before connecting Slack.`);
     }
 
     const redirectUrl = getPostAuthRedirectUrl(request, oauthState);

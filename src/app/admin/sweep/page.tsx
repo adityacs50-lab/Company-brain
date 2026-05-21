@@ -155,6 +155,20 @@ export default function SweepDashboard() {
     fetchSkills();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const error = params.get('error');
+
+    if (connected || error) {
+      fetchEmployees();
+      if (error) {
+        alert(`OAuth connection failed: ${error}`);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   // 4. Polling sweep status
   useEffect(() => {
     let intervalId: NodeJS.Timeout;

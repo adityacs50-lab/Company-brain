@@ -50,21 +50,26 @@ export async function GET(request: Request) {
       throw new Error('No access token returned in Notion response');
     }
 
-    // Upsert Notion token in Supabase
-    const { error: dbError } = await supabase.from('brain_employees').upsert(
-      {
-        org_id: orgId,
-        employee_id: employeeId,
+    // Store Notion token on the existing employee profile.
+    const { data: updatedEmployee, error: dbError } = await supabase
+      .from('brain_employees')
+      .update({
         notion_token: notionToken,
         notion_workspace_id: workspaceId,
         last_synced: new Date().toISOString(),
-      },
-      { onConflict: 'employee_id' }
-    );
+      })
+      .eq('org_id', orgId)
+      .eq('employee_id', employeeId)
+      .select('employee_id')
+      .single();
 
     if (dbError) {
       console.error('Database Error storing Notion tokens:', dbError);
       throw new Error(`Database Error: ${dbError.message}`);
+    }
+
+    if (!updatedEmployee) {
+      throw new Error(`No employee profile found for ${employeeId}. Create the employee before connecting Notion.`);
     }
 
     const redirectUrl = getPostAuthRedirectUrl(request, oauthState);
