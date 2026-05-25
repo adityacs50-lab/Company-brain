@@ -380,8 +380,8 @@ export default function HandoffDemoPage() {
           <span className="text-gradient">Company Brain</span>
         </Link>
         <div className="nav-actions">
-          <Link href="/admin/sweep" className="btn-secondary" style={{ textDecoration: 'none' }}>
-            Legacy sweep demo
+          <Link href="/" className="btn-secondary" style={{ textDecoration: 'none' }}>
+            Landing page
           </Link>
         </div>
       </nav>

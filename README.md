@@ -10,7 +10,6 @@ Company Brain turns scattered pre-sale context from emails, Slack notes, documen
 
 - Landing page: [https://company-brain-tawny.vercel.app/](https://company-brain-tawny.vercel.app/)
 - MVP demo: [https://company-brain-tawny.vercel.app/admin/handoff](https://company-brain-tawny.vercel.app/admin/handoff)
-- Legacy integration demo: [https://company-brain-tawny.vercel.app/admin/sweep](https://company-brain-tawny.vercel.app/admin/sweep)
 
 ## Current MVP
 
@@ -64,7 +63,6 @@ Company Brain is not trying to replace the CRM. It sits on top of existing tools
 | `/` | Landing page for the Sales-to-CS handoff wedge |
 | `/admin/handoff` | Current MVP demo with real pasted input + Groq extraction |
 | `/api/handoff/extract` | API endpoint that turns raw pre-sale context into a structured handoff brief |
-| `/admin/sweep` | Legacy prototype showing Gmail/Slack/Drive/Notion connection and org sweep flow |
 
 ## Handoff API
 
@@ -111,9 +109,7 @@ Response:
 
 - Next.js App Router
 - React + TypeScript
-- Supabase/Postgres for the legacy sweep prototype
 - Groq `llama-3.3-70b-versatile` for extraction
-- Google OAuth, Slack OAuth, Notion OAuth in the legacy integration flow
 - Vercel deployment
 
 ## Environment Variables
@@ -179,7 +175,6 @@ Working:
 - Real pasted-input handoff extraction using Groq
 - Human approval step
 - Markdown/JSON export
-- Legacy Gmail/Slack/Drive/Notion sweep prototype remains available
 
 Not built yet:
 
