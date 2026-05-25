@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Company Brain: Enterprise Knowledge Capture',
-  description: 'Sweeps operational communications and maps institutional knowledge to executable skills.',
+  title: 'Company Brain: Sales-to-CS Handoff Router',
+  description:
+    'Turn scattered pre-sale context from Gmail, Slack, Drive, Notion, and call transcripts into source-backed customer success handoff briefs.',
 };
 
 export default function RootLayout({

@@ -23,6 +23,35 @@ export interface SkillExtractionSource {
   content: string;
 }
 
+export interface HandoffExtractionSource {
+  title: string;
+  content: string;
+}
+
+export interface HandoffDealContext {
+  customer?: string;
+  dealValue?: string;
+  ae?: string;
+  csm?: string;
+}
+
+export interface ExtractedHandoffBrief {
+  customer: string;
+  stage: string;
+  dealValue: string;
+  ae: string;
+  csm: string;
+  buyerIntent: string;
+  successMetric: string;
+  promisedOutcomes: string[];
+  stakeholders: string[];
+  internalSkeptic: string;
+  technicalConstraints: string[];
+  unresolvedRisks: string[];
+  nextSteps: string[];
+  sourceLinks: string[];
+}
+
 function toSkillName(title: string) {
   return title
     .replace(/^(Email Thread|Google Doc|Slack Message|Notion Page):\s*/i, '')
@@ -210,4 +239,162 @@ Important Guidelines:
 
 export async function extractSkillsFromText(text: string): Promise<ExtractedSkill[]> {
   return extractSkillsFromSources([{ title: 'Raw communication', content: text }]);
+}
+
+function asStringArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const cleaned = value
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
+function fallbackHandoffBrief(
+  sources: HandoffExtractionSource[],
+  dealContext: HandoffDealContext = {}
+): ExtractedHandoffBrief {
+  const joinedText = sources.map((source) => source.content).join('\n').trim();
+  const firstUsefulLine =
+    joinedText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 40) || 'Customer context was provided, but the exact buying intent needs review.';
+
+  return {
+    customer: dealContext.customer || 'Unknown customer',
+    stage: 'Closed-Won',
+    dealValue: dealContext.dealValue || 'Unknown',
+    ae: dealContext.ae || 'Unknown AE',
+    csm: dealContext.csm || 'Unassigned CSM',
+    buyerIntent: firstUsefulLine.slice(0, 260),
+    successMetric: 'Needs human review. Look for the customer-defined 30-day onboarding success metric in the source text.',
+    promisedOutcomes: [
+      'Review the source text for promises made during sales.',
+      'Confirm expected onboarding outcome with the AE before kickoff.',
+    ],
+    stakeholders: ['Economic buyer or champion not confidently extracted. Review source text.'],
+    internalSkeptic: 'No clear internal skeptic extracted. Ask AE/RevOps before kickoff.',
+    technicalConstraints: ['No clear technical constraints extracted. Review implementation notes before kickoff.'],
+    unresolvedRisks: ['Handoff brief was generated from weak or incomplete context and needs human review.'],
+    nextSteps: [
+      'CSM reviews the source-backed handoff brief before kickoff.',
+      'AE confirms promises, buyer intent, and success metric.',
+      'CSM sends kickoff agenda based on confirmed context.',
+    ],
+    sourceLinks: sources.map((source) => source.title || 'Pasted source'),
+  };
+}
+
+export async function extractHandoffBriefFromSources(
+  sources: HandoffExtractionSource[],
+  dealContext: HandoffDealContext = {}
+): Promise<ExtractedHandoffBrief> {
+  const usableSources = sources
+    .map((source) => ({
+      title: source.title || 'Pasted source',
+      content: (source.content || '').trim(),
+    }))
+    .filter((source) => source.content.length >= 20);
+
+  if (usableSources.length === 0) {
+    return fallbackHandoffBrief([{ title: 'Empty source', content: '' }], dealContext);
+  }
+
+  try {
+    const systemPrompt = `You generate Sales-to-CS handoff briefs for B2B SaaS teams.
+The user will provide scattered pre-sale context such as call transcripts, email threads, Slack notes, CRM notes, Google Docs, or Notion notes.
+
+Extract only information that a Customer Success Manager needs before onboarding:
+- why the customer bought
+- the 30-day success metric
+- promises made by sales
+- stakeholders and roles
+- internal skeptic or blocker
+- technical constraints
+- unresolved risks
+- next steps for CS
+- source titles that support the brief
+
+Return ONLY valid JSON matching this exact schema:
+{
+  "customer": "string",
+  "stage": "Closed-Won",
+  "dealValue": "string",
+  "ae": "string",
+  "csm": "string",
+  "buyerIntent": "string",
+  "successMetric": "string",
+  "promisedOutcomes": ["string"],
+  "stakeholders": ["string"],
+  "internalSkeptic": "string",
+  "technicalConstraints": ["string"],
+  "unresolvedRisks": ["string"],
+  "nextSteps": ["string"],
+  "sourceLinks": ["string"]
+}
+
+Rules:
+- Be concrete. Do not use startup buzzwords.
+- If a field is missing, say what needs human review instead of hallucinating.
+- Keep each bullet short and useful for a real CSM.
+- Use the supplied customer, AE, CSM, and deal value if present.
+- The sourceLinks array should contain source titles, not invented URLs.`;
+
+    const sourceText = usableSources
+      .map((source, index) => `SOURCE ${index + 1}: ${source.title}\n${source.content.slice(0, 6000)}`)
+      .join('\n\n---\n\n');
+
+    const response = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Deal context:
+Customer: ${dealContext.customer || 'Unknown'}
+Deal value: ${dealContext.dealValue || 'Unknown'}
+AE: ${dealContext.ae || 'Unknown'}
+CSM: ${dealContext.csm || 'Unassigned'}
+
+Raw pre-sale sources:
+${sourceText}`,
+        },
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return fallbackHandoffBrief(usableSources, dealContext);
+    }
+
+    const data = JSON.parse(content);
+    const fallback = fallbackHandoffBrief(usableSources, dealContext);
+
+    return {
+      customer: String(data.customer || dealContext.customer || fallback.customer),
+      stage: 'Closed-Won',
+      dealValue: String(data.dealValue || dealContext.dealValue || fallback.dealValue),
+      ae: String(data.ae || dealContext.ae || fallback.ae),
+      csm: String(data.csm || dealContext.csm || fallback.csm),
+      buyerIntent: String(data.buyerIntent || fallback.buyerIntent),
+      successMetric: String(data.successMetric || fallback.successMetric),
+      promisedOutcomes: asStringArray(data.promisedOutcomes, fallback.promisedOutcomes),
+      stakeholders: asStringArray(data.stakeholders, fallback.stakeholders),
+      internalSkeptic: String(data.internalSkeptic || fallback.internalSkeptic),
+      technicalConstraints: asStringArray(data.technicalConstraints, fallback.technicalConstraints),
+      unresolvedRisks: asStringArray(data.unresolvedRisks, fallback.unresolvedRisks),
+      nextSteps: asStringArray(data.nextSteps, fallback.nextSteps),
+      sourceLinks: asStringArray(data.sourceLinks, usableSources.map((source) => source.title)),
+    };
+  } catch (error: any) {
+    console.error('Error in Groq handoff extraction:', error?.message || error);
+    return fallbackHandoffBrief(usableSources, dealContext);
+  }
 }
