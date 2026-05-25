@@ -339,6 +339,40 @@ export default function HandoffDemoPage() {
     }
   };
 
+  const downloadOutput = (mode: 'markdown' | 'json') => {
+    if (!brief) return;
+
+    const fileBody = mode === 'markdown'
+      ? toMarkdown(brief)
+      : JSON.stringify(
+          {
+            format: 'company_brain_sales_to_cs_handoff_brief',
+            approval: isApproved ? 'human_approved' : 'needs_review',
+            brief,
+          },
+          null,
+          2
+        );
+    const extension = mode === 'markdown' ? 'md' : 'json';
+    const mimeType = mode === 'markdown' ? 'text/markdown' : 'application/json';
+    const safeCustomer = brief.customer.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'customer';
+    const blob = new Blob([fileBody], { type: `${mimeType};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `${safeCustomer}-sales-to-cs-handoff.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setLogs((current) => [
+      ...current,
+      `[Export] Downloaded ${extension.toUpperCase()} handoff brief for ${brief.customer}.`,
+    ]);
+  };
+
   return (
     <main className="handoff-shell">
       <nav className="handoff-nav">
@@ -612,6 +646,12 @@ export default function HandoffDemoPage() {
             </button>
             <button type="button" className="btn-secondary" disabled={!output} onClick={copyOutput}>
               {copied ? 'Copied' : 'Copy output'}
+            </button>
+            <button type="button" className="btn-secondary" disabled={!brief} onClick={() => downloadOutput('markdown')}>
+              Download .md
+            </button>
+            <button type="button" className="btn-secondary" disabled={!brief} onClick={() => downloadOutput('json')}>
+              Download .json
             </button>
           </div>
 
