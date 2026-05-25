@@ -663,7 +663,7 @@ export default function HandoffDemoPage() {
         <section className="handoff-panel">
           <div className="handoff-panel-header">
             <h2>Extraction log</h2>
-            <p>Shows the YC demo story without pretending the product is fully self-serve yet.</p>
+            <p>Tracks how the handoff brief was generated from the provided sales context.</p>
           </div>
 
           <div className="handoff-log">
