@@ -8,6 +8,16 @@ The resulting outputs are consolidated into a unified, high-confidence catalog o
 
 ---
 
+## Technical Report
+
+Read the technical thesis behind Company Brain:
+
+[Company Brain: Human-Approved Operational Memory for Enterprise AI Agents](papers/company-brain-operational-memory.pdf)
+
+The report argues that enterprise AI agents do not only need more retrieved context. Before agents take actions inside companies, they need source-backed, human-approved operating instructions that define what they are allowed to do, when to escalate, and what evidence supports the workflow.
+
+---
+
 ## System Architecture
 
 ```mermaid
