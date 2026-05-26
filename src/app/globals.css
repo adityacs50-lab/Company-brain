@@ -4039,6 +4039,50 @@ h1, h2, h3, h4, h5, h6 {
   gap: 14px;
 }
 
+.dash-export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dash-export-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #D1FAE5;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dash-export-bar button:hover {
+  border-color: rgba(94, 234, 212, 0.32);
+  background: rgba(94, 234, 212, 0.08);
+  color: #fff;
+}
+
+.dash-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 40;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 12px;
+  background: rgba(5, 46, 22, 0.92);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.34);
+  color: #D1FAE5;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .dash-summary-card {
   display: flex;
   align-items: center;
@@ -4341,6 +4385,14 @@ h1, h2, h3, h4, h5, h6 {
 
   .dash-receipt {
     max-width: 100%;
+  }
+
+  .dash-export-bar {
+    justify-content: stretch;
+  }
+
+  .dash-export-bar button {
+    flex: 1 1 100%;
   }
 }
 

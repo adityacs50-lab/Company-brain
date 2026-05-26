@@ -6,9 +6,12 @@ import {
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
+  ClipboardCopy,
+  Download,
   FileText,
   Link2,
   LockKeyhole,
+  MessageSquareText,
   MessageSquareWarning,
   PanelLeft,
   PlayCircle,
@@ -71,8 +74,134 @@ export default function DashboardPage() {
   const [result, setResult] = useState<PreMortemResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [extractError, setExtractError] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
 
   const displayCustomer = useMemo(() => customer.trim() || 'Selected account', [customer]);
+
+  function showToast(message: string) {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage(''), 2200);
+  }
+
+  function buildSlackBrief(data: PreMortemResult) {
+    const alertLines = data.alerts.length
+      ? data.alerts
+          .map((alert) => `• ${alert.title} - _Action: ${alert.action}_ (Receipt: ${alert.receipt})`)
+          .join('\n')
+      : '• No alerts extracted.';
+
+    const promiseLines = data.promises.length
+      ? data.promises
+          .map((promise) => `• [ ] ${promise.title} - _Owner: ${promise.owner}_ (Receipt: ${promise.receipt})`)
+          .join('\n')
+      : '• [ ] No promises extracted.';
+
+    const actionLines = data.actionPlan.length
+      ? data.actionPlan
+          .map((item, index) => `${index + 1}. ${item.day}: ${item.action}`)
+          .join('\n')
+      : '1. Day 1: Review handoff context with AE and CSM.';
+
+    return `🚨 *Batonyx Day-Zero Pre-Mortem: ${displayCustomer}*
+*Risk Level:* ${data.riskLevel}
+
+*Pre-Mortem Alerts:*
+${alertLines}
+
+*Expectation Ledger:*
+${promiseLines}
+
+*7-Day Action Plan:*
+${actionLines}`;
+  }
+
+  function buildMarkdownBrief(data: PreMortemResult) {
+    const alertLines = data.alerts.length
+      ? data.alerts
+          .map(
+            (alert) =>
+              `- **${alert.title}** (${alert.level})\n  - Explanation: ${alert.explanation}\n  - Action: ${alert.action}\n  - Receipt: \`${alert.receipt}\``
+          )
+          .join('\n')
+      : '- No alerts extracted.';
+
+    const promiseLines = data.promises.length
+      ? data.promises
+          .map(
+            (promise) =>
+              `- [ ] **${promise.title}**\n  - Owner: ${promise.owner}\n  - Status: ${promise.status}\n  - Receipt: \`${promise.receipt}\``
+          )
+          .join('\n')
+      : '- [ ] No promises extracted.';
+
+    const actionLines = data.actionPlan.length
+      ? data.actionPlan
+          .map((item, index) => `${index + 1}. **${item.day}: ${item.action}**\n   ${item.description}`)
+          .join('\n')
+      : '1. **Day 1: Review handoff context**\n   CSM and AE verify the source-backed brief.';
+
+    return `# Batonyx Day-Zero Pre-Mortem: ${displayCustomer}
+
+**Risk Level:** ${data.riskLevel}  
+**Deal Value:** ${dealValue}  
+**AE:** ${ae}  
+**CSM:** ${csm}
+
+## Pre-Mortem Alerts
+${alertLines}
+
+## Expectation Ledger
+${promiseLines}
+
+## 7-Day Action Plan
+${actionLines}`;
+  }
+
+  async function copyToClipboard(text: string) {
+    if (!navigator.clipboard) {
+      throw new Error('Clipboard is not available in this browser.');
+    }
+
+    await navigator.clipboard.writeText(text);
+    showToast('Copied to clipboard!');
+  }
+
+  async function handleCopySlack() {
+    if (!result) return;
+    await copyToClipboard(buildSlackBrief(result));
+  }
+
+  async function handleCopyMarkdown() {
+    if (!result) return;
+    await copyToClipboard(buildMarkdownBrief(result));
+  }
+
+  function handleDownloadJson() {
+    if (!result) return;
+
+    const slug = displayCustomer
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'customer';
+    const payload = {
+      customerName: displayCustomer,
+      dealValue,
+      ae,
+      csm,
+      generatedAt: new Date().toISOString(),
+      ...result,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `batonyx-${slug}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast('JSON downloaded.');
+  }
 
   async function handleGenerate() {
     setIsGenerating(true);
@@ -138,6 +267,8 @@ export default function DashboardPage() {
       </aside>
 
       <section className="dash-main">
+        {toastMessage && <div className="dash-toast">{toastMessage}</div>}
+
         <header className="dash-topbar">
           <div>
             <span className="dash-eyebrow">MVP Dashboard</span>
@@ -208,6 +339,21 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="dash-output-stack">
+                <div className="dash-export-bar">
+                  <button onClick={handleCopySlack} type="button">
+                    <MessageSquareText size={16} />
+                    Copy Slack Brief
+                  </button>
+                  <button onClick={handleCopyMarkdown} type="button">
+                    <ClipboardCopy size={16} />
+                    Copy Markdown
+                  </button>
+                  <button onClick={handleDownloadJson} type="button">
+                    <Download size={16} />
+                    Download JSON
+                  </button>
+                </div>
+
                 <div className="dash-summary-card">
                   <div>
                     <span className="dash-eyebrow">Closed-won account</span>
