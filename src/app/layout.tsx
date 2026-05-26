@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Company Brain: Sales-to-CS Handoff Router',
+  title: 'Batonyx: Source-Verified CS Handoff Briefs',
   description:
-    'Turn scattered pre-sale context from Gmail, Slack, Drive, Notion, and call transcripts into source-backed customer success handoff briefs.',
+    'Turn Closed-Won sales context into source-verified Customer Success handoff briefs with promises, buyer KPIs, skeptics, blockers, and receipts.',
 };
 
 export default function RootLayout({

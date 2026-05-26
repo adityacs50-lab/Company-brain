@@ -136,7 +136,7 @@ function buildBrief(selectedSources: HandoffSource[]): HandoffBrief {
     ae: closedWonDeal.ae,
     csm: closedWonDeal.csm,
     buyerIntent:
-      'Acme bought Company Brain to prevent surprise churn by giving CS leadership a source-backed account-risk view before QBRs and renewals.',
+      'Acme bought Batonyx to prevent surprise churn by giving CS leadership a source-backed account-risk view before QBRs and renewals.',
     successMetric:
       'Within 30 days, identify at least five risky accounts and produce one board-ready churn-risk brief with source links.',
     promisedOutcomes: [
@@ -239,7 +239,7 @@ export default function HandoffDemoPage() {
       ? toMarkdown(brief)
       : JSON.stringify(
           {
-            format: 'company_brain_sales_to_cs_handoff_brief',
+            format: 'batonyx_sales_to_cs_handoff_brief',
             approval: isApproved ? 'human_approved' : 'needs_review',
             brief,
           },
@@ -346,7 +346,7 @@ export default function HandoffDemoPage() {
       ? toMarkdown(brief)
       : JSON.stringify(
           {
-            format: 'company_brain_sales_to_cs_handoff_brief',
+            format: 'batonyx_sales_to_cs_handoff_brief',
             approval: isApproved ? 'human_approved' : 'needs_review',
             brief,
           },
@@ -377,7 +377,7 @@ export default function HandoffDemoPage() {
     <main className="handoff-shell">
       <nav className="handoff-nav">
         <Link href="/" className="nav-brand">
-          <span className="text-gradient">Company Brain</span>
+          <span className="text-gradient">Batonyx</span>
         </Link>
         <div className="nav-actions">
           <Link href="/" className="btn-secondary" style={{ textDecoration: 'none' }}>
@@ -389,10 +389,10 @@ export default function HandoffDemoPage() {
       <section className="handoff-hero">
         <div>
           <p className="handoff-eyebrow">Sales-to-CS Handoff Router</p>
-          <h1>Sales sells intent. CRMs store facts. Company Brain captures the difference.</h1>
+          <h1>Your CS team should not go into kickoffs blind.</h1>
           <p>
-            Demo the new wedge: when a B2B SaaS deal closes, Company Brain reads scattered pre-sale context and
-            produces a source-backed handoff brief for the customer success team.
+            Demo the Batonyx MVP: paste pre-sale context, extract the handoff brief, review the risks, and export
+            Markdown or JSON with source-backed context.
           </p>
         </div>
         <div className="handoff-hero-card">
