@@ -9,6 +9,7 @@ interface PreMortemAlert {
   explanation: string;
   action: string;
   receipt: string;
+  confidence: RiskLevel;
 }
 
 interface PreMortemPromise {
@@ -16,12 +17,17 @@ interface PreMortemPromise {
   owner: string;
   status: 'Unreviewed';
   receipt: string;
+  confidence: RiskLevel;
+}
+
+interface MissingInformation {
+  topic: string;
+  impact: string;
 }
 
 interface PreMortemAction {
   day: string;
   action: string;
-  description: string;
 }
 
 interface PreMortemResult {
@@ -31,6 +37,7 @@ interface PreMortemResult {
   actionsCount: number;
   alerts: PreMortemAlert[];
   promises: PreMortemPromise[];
+  missingInformation: MissingInformation[];
   actionPlan: PreMortemAction[];
 }
 
@@ -77,6 +84,7 @@ function normalizeResult(data: any, context: string): PreMortemResult {
         explanation: asString(alert?.explanation, 'Review source context before kickoff.'),
         action: asString(alert?.action, 'Ask AE and CSM to verify this risk before kickoff.'),
         receipt: cleanReceipt(alert?.receipt, fallbackReceipt),
+        confidence: asRiskLevel(alert?.confidence),
       }))
     : [];
 
@@ -86,6 +94,14 @@ function normalizeResult(data: any, context: string): PreMortemResult {
         owner: asString(promise?.owner, 'AE'),
         status: 'Unreviewed',
         receipt: cleanReceipt(promise?.receipt, fallbackReceipt),
+        confidence: asRiskLevel(promise?.confidence),
+      }))
+    : [];
+
+  const missingInformation = Array.isArray(data?.missingInformation)
+    ? data.missingInformation.slice(0, 6).map((item: any): MissingInformation => ({
+        topic: asString(item?.topic, 'Missing context'),
+        impact: asString(item?.impact, 'CS should verify this before kickoff.'),
       }))
     : [];
 
@@ -93,7 +109,6 @@ function normalizeResult(data: any, context: string): PreMortemResult {
     ? data.actionPlan.slice(0, 7).map((item: any): PreMortemAction => ({
         day: asString(item?.day, 'Day 1'),
         action: asString(item?.action, 'Review the handoff with AE and CSM.'),
-        description: asString(item?.description, 'Confirm source-backed context before the kickoff call.'),
       }))
     : [];
 
@@ -104,6 +119,7 @@ function normalizeResult(data: any, context: string): PreMortemResult {
     actionsCount: actionPlan.length,
     alerts,
     promises,
+    missingInformation,
     actionPlan,
   };
 }
@@ -124,6 +140,7 @@ function fallbackPreMortem(context: string): PreMortemResult {
           'The model could not complete extraction, but the provided pre-sale context should be reviewed before kickoff.',
         action: 'Have the CSM and AE verify buyer goals, blockers, and promises before the first customer call.',
         receipt,
+        confidence: 'Low',
       },
     ],
     promises: [
@@ -132,23 +149,31 @@ function fallbackPreMortem(context: string): PreMortemResult {
         owner: 'AE',
         status: 'Unreviewed',
         receipt,
+        confidence: 'Low',
+      },
+    ],
+    missingInformation: [
+      {
+        topic: 'Validated buyer goals',
+        impact: 'CS needs the customer-defined success metric before building the kickoff agenda.',
+      },
+      {
+        topic: 'Technical buyer and blockers',
+        impact: 'Unidentified technical ownership can stall implementation after the first call.',
       },
     ],
     actionPlan: [
       {
         day: 'Day 1',
         action: 'Review source-backed handoff context',
-        description: 'CSM and AE confirm what was promised, who objected, and what must be resolved first.',
       },
       {
         day: 'Day 1-2',
         action: 'Identify buyer success metric',
-        description: 'Turn the customer-defined success criteria into the kickoff agenda.',
       },
       {
         day: 'Day 3',
         action: 'Resolve open implementation risks',
-        description: 'Document unresolved technical or operational risks before implementation starts.',
       },
     ],
   };
@@ -173,21 +198,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const systemPrompt = `You are an elite RevOps & Customer Success AI. Analyze the provided pre-sale conversational context (Gong/Slack/Email). Extract hidden churn risks, unfulfilled sales promises, and create a 7-day kickoff action plan. You MUST output strictly in JSON format. EVERY extracted alert, promise, and action MUST include a receipt (a direct quote or timestamp from the text). Do not hallucinate.
+    const systemPrompt = `You are an elite RevOps & Customer Success AI. Your job is to protect Revenue by finding hidden churn risks in pre-sale conversations.
+
+Analyze the provided pre-sale conversational context from Gong, Slack, Email, CRM notes, or sales handoff text. Extract only what is explicitly supported by the text.
+
+Strict anti-hallucination rules:
+- EVERY alert and promise MUST include a receipt copied from the source text: an exact short quote, timestamp, channel, email date, or speaker line.
+- If a risk, promise, stakeholder, timeline, blocker, or action is not explicitly supported by the provided text, DO NOT extract it as a fact.
+- Do not invent names, buyer roles, dates, integrations, tools, contract values, or timelines.
+- For the actionPlan, each action must be directly derived from an extracted alert, promise, or missing-information item.
+- If the source text is thin, return fewer items and use missingInformation to explain what CS still needs.
+
+Confidence scoring:
+- Assign confidence "High" when the source text explicitly states the issue or promise.
+- Assign confidence "Medium" when the source text strongly implies it but needs human confirmation.
+- Assign confidence "Low" when the item is weakly supported; prefer placing weak unknowns in missingInformation instead of alerts/promises.
+
+Missing information:
+- Identify critical B2B SaaS handoff context missing from the provided text, such as technical buyer, implementation owner, success metric, timeline, security review, integrations, onboarding deadline, pricing/discount expectation, procurement risk, or unresolved objections.
+- For each missing topic, explain why CS needs it before kickoff.
 
 Return a JSON object exactly matching this TypeScript shape:
 {
   "riskLevel": "High" | "Medium" | "Low",
-  "alertsCount": number,
-  "promisesCount": number,
-  "actionsCount": number,
   "alerts": [
     {
       "level": "High" | "Medium" | "Low",
       "title": "string",
       "explanation": "string",
       "action": "string",
-      "receipt": "string (e.g., Gong 00:18:42)"
+      "receipt": "string",
+      "confidence": "High" | "Medium" | "Low"
     }
   ],
   "promises": [
@@ -195,23 +236,29 @@ Return a JSON object exactly matching this TypeScript shape:
       "title": "string",
       "owner": "string",
       "status": "Unreviewed",
-      "receipt": "string"
+      "receipt": "string",
+      "confidence": "High" | "Medium" | "Low"
+    }
+  ],
+  "missingInformation": [
+    {
+      "topic": "string",
+      "impact": "string"
     }
   ],
   "actionPlan": [
     {
       "day": "Day 1" | "Day 1-2" | "Day 3" | "Day 7",
-      "action": "string",
-      "description": "string"
+      "action": "string"
     }
   ]
 }
 
 Rules:
-- Use only evidence from the provided context.
-- If a risk or promise is weak, mark it as Medium or Low and explain what must be verified.
-- Receipts must be copied from the source text as timestamps, channel names, email dates, or short direct quotes.
-- Counts must equal the array lengths.
+- Return 1-5 alerts, 1-8 promises, 2-6 missingInformation items, and 3-5 actionPlan items.
+- riskLevel should be High if there is a clear implementation, expectation, buyer, legal/security, or commercial risk that could damage onboarding.
+- riskLevel should be Medium if risks exist but are mostly verification gaps.
+- riskLevel should be Low only if context is rich, aligned, and has few open questions.
 - Do not include markdown, commentary, or keys outside the schema.`;
 
     const response = await groq.chat.completions.create({

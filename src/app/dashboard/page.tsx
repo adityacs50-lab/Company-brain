@@ -40,17 +40,22 @@ interface PreMortemResult {
     explanation: string;
     action: string;
     receipt: string;
+    confidence: RiskLevel;
   }>;
   promises: Array<{
     title: string;
     owner: string;
     status: string;
     receipt: string;
+    confidence: RiskLevel;
+  }>;
+  missingInformation: Array<{
+    topic: string;
+    impact: string;
   }>;
   actionPlan: Array<{
     day: string;
     action: string;
-    description: string;
   }>;
 }
 
@@ -96,6 +101,12 @@ export default function DashboardPage() {
           .join('\n')
       : '• [ ] No promises extracted.';
 
+    const missingLines = data.missingInformation.length
+      ? data.missingInformation
+          .map((item) => `• ${item.topic} - _Impact: ${item.impact}_`)
+          .join('\n')
+      : '• No missing information flagged.';
+
     const actionLines = data.actionPlan.length
       ? data.actionPlan
           .map((item, index) => `${index + 1}. ${item.day}: ${item.action}`)
@@ -111,6 +122,9 @@ ${alertLines}
 *Expectation Ledger:*
 ${promiseLines}
 
+*Missing Information:*
+${missingLines}
+
 *7-Day Action Plan:*
 ${actionLines}`;
   }
@@ -120,7 +134,7 @@ ${actionLines}`;
       ? data.alerts
           .map(
             (alert) =>
-              `- **${alert.title}** (${alert.level})\n  - Explanation: ${alert.explanation}\n  - Action: ${alert.action}\n  - Receipt: \`${alert.receipt}\``
+              `- **${alert.title}** (${alert.level}, ${alert.confidence} confidence)\n  - Explanation: ${alert.explanation}\n  - Action: ${alert.action}\n  - Receipt: \`${alert.receipt}\``
           )
           .join('\n')
       : '- No alerts extracted.';
@@ -129,14 +143,20 @@ ${actionLines}`;
       ? data.promises
           .map(
             (promise) =>
-              `- [ ] **${promise.title}**\n  - Owner: ${promise.owner}\n  - Status: ${promise.status}\n  - Receipt: \`${promise.receipt}\``
+              `- [ ] **${promise.title}**\n  - Owner: ${promise.owner}\n  - Status: ${promise.status}\n  - Confidence: ${promise.confidence}\n  - Receipt: \`${promise.receipt}\``
           )
           .join('\n')
       : '- [ ] No promises extracted.';
 
+    const missingLines = data.missingInformation.length
+      ? data.missingInformation
+          .map((item) => `- **${item.topic}**\n  - Impact: ${item.impact}`)
+          .join('\n')
+      : '- No missing information flagged.';
+
     const actionLines = data.actionPlan.length
       ? data.actionPlan
-          .map((item, index) => `${index + 1}. **${item.day}: ${item.action}**\n   ${item.description}`)
+          .map((item, index) => `${index + 1}. **${item.day}: ${item.action}**`)
           .join('\n')
       : '1. **Day 1: Review handoff context**\n   CSM and AE verify the source-backed brief.';
 
@@ -152,6 +172,9 @@ ${alertLines}
 
 ## Expectation Ledger
 ${promiseLines}
+
+## Missing Information
+${missingLines}
 
 ## 7-Day Action Plan
 ${actionLines}`;
@@ -400,6 +423,9 @@ ${actionLines}`;
                           <span>{alert.level}</span>
                         </div>
                         <p>{alert.explanation}</p>
+                        <div className="dash-confidence">
+                          Confidence: <strong>{alert.confidence}</strong>
+                        </div>
                         <div className="dash-next-step">
                           <CheckCircle2 size={16} />
                           {alert.action}
@@ -407,6 +433,31 @@ ${actionLines}`;
                         <ReceiptChip>{alert.receipt}</ReceiptChip>
                       </article>
                     ))}
+                  </div>
+                </section>
+
+                <section className="dash-section-card">
+                  <div className="dash-section-title">
+                    <AlertTriangle size={20} />
+                    <div>
+                      <span className="dash-eyebrow">Missing Information</span>
+                      <h3>Context CS should collect before kickoff</h3>
+                    </div>
+                  </div>
+                  <div className="dash-missing-list">
+                    {result.missingInformation.length > 0 ? (
+                      result.missingInformation.map((item) => (
+                        <article className="dash-missing-row" key={item.topic}>
+                          <strong>{item.topic}</strong>
+                          <p>{item.impact}</p>
+                        </article>
+                      ))
+                    ) : (
+                      <article className="dash-missing-row">
+                        <strong>No missing context flagged</strong>
+                        <p>The extracted context looks complete enough for CS review.</p>
+                      </article>
+                    )}
                   </div>
                 </section>
 
@@ -424,7 +475,7 @@ ${actionLines}`;
                         <div className="dash-ledger-row" key={item.title}>
                           <div>
                             <strong>{item.title}</strong>
-                            <span>{item.owner} | {item.status}</span>
+                            <span>{item.owner} | {item.status} | {item.confidence} confidence</span>
                           </div>
                           <ReceiptChip>{item.receipt}</ReceiptChip>
                         </div>
@@ -446,7 +497,6 @@ ${actionLines}`;
                           <span>{item.day}</span>
                           <div>
                             <strong>{item.action}</strong>
-                            <p>{item.description}</p>
                           </div>
                         </div>
                       ))}
