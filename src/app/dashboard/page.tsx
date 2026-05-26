@@ -24,90 +24,32 @@ Slack #deal-acme - AE: "Dave stopped joining the last two calls. Champion says h
 Gmail thread - Buyer VP CS: "Success means reducing failed onboarding from 18% to under 8% this quarter."
 Slack #deal-acme - SE: "SOC2 is fine, but Zendesk tag cleanup and duplicate Salesforce accounts need to happen before kickoff."`;
 
-const alerts = [
-  {
-    title: 'Technical lead disengaged after API concern',
-    risk: 'High',
-    detail:
-      'Dave raised the API rate-limit concern, never received a precise answer, then stopped joining the last two sales calls.',
-    action: 'Book a technical alignment with Dave before the kickoff call.',
-    receipt: 'Gong 00:18:42',
-    source: 'Gong',
-  },
-  {
-    title: 'Value proof is tied to quarter-end pressure',
-    risk: 'Medium',
-    detail:
-      'The CFO accepted discounting only if onboarding proves value before quarter end, creating a compressed TTV window.',
-    action: 'Make the first 7 days measurable around the buyer KPI.',
-    receipt: 'Email May 21',
-    source: 'Email',
-  },
-  {
-    title: 'Implementation starts with dirty CRM context',
-    risk: 'Medium',
-    detail:
-      'The sales engineer flagged duplicate Salesforce accounts and missing Zendesk tags before close.',
-    action: 'Clean account records before CS asks the buyer to repeat setup details.',
-    receipt: 'Slack #deal-acme',
-    source: 'Slack',
-  },
-];
+type RiskLevel = 'High' | 'Medium' | 'Low';
 
-const promises = [
-  {
-    promise: 'Custom churn-risk report delivered within 30 days',
-    owner: 'AE',
-    status: 'Needs CS review',
-    receipt: 'Gong 00:22:10',
-  },
-  {
-    promise: 'Quarter-end onboarding value proof for the CFO',
-    owner: 'CSM',
-    status: 'Critical path',
-    receipt: 'Email May 21',
-  },
-  {
-    promise: 'Support for quarter-end API traffic spikes',
-    owner: 'SE',
-    status: 'Unverified',
-    receipt: 'Gong 00:18:42',
-  },
-  {
-    promise: 'Zendesk tag cleanup before kickoff',
-    owner: 'RevOps',
-    status: 'Open',
-    receipt: 'Slack #deal-acme',
-  },
-];
-
-const actions = [
-  {
-    window: 'Day 1',
-    task: 'Send expectation ledger to AE, CSM, SE, and VP CS for sign-off.',
-    reason: 'Align internal team before the customer sees kickoff materials.',
-  },
-  {
-    window: 'Day 1-2',
-    task: 'Schedule technical alignment with Dave.',
-    reason: 'Silent technical detractor is the highest implementation stall risk.',
-  },
-  {
-    window: 'Day 3',
-    task: 'Confirm API limits and document the support boundary.',
-    reason: 'The biggest pre-sale objection is still unresolved.',
-  },
-  {
-    window: 'Day 4-5',
-    task: 'Build kickoff agenda around failed-onboarding reduction.',
-    reason: 'The buyer KPI is clear and should lead the first call.',
-  },
-  {
-    window: 'Day 7',
-    task: 'Review CRM and Zendesk cleanup before implementation starts.',
-    reason: 'Bad internal records will make CS look unprepared.',
-  },
-];
+interface PreMortemResult {
+  riskLevel: RiskLevel;
+  alertsCount: number;
+  promisesCount: number;
+  actionsCount: number;
+  alerts: Array<{
+    level: RiskLevel;
+    title: string;
+    explanation: string;
+    action: string;
+    receipt: string;
+  }>;
+  promises: Array<{
+    title: string;
+    owner: string;
+    status: string;
+    receipt: string;
+  }>;
+  actionPlan: Array<{
+    day: string;
+    action: string;
+    description: string;
+  }>;
+}
 
 const navItems = ['Deals', 'Pre-Mortems', 'Receipts', 'Settings'];
 
@@ -126,17 +68,43 @@ export default function DashboardPage() {
   const [ae, setAe] = useState('Sarah Patel');
   const [csm, setCsm] = useState('Maya Chen');
   const [context, setContext] = useState(sampleContext);
-  const [hasGenerated, setHasGenerated] = useState(false);
+  const [result, setResult] = useState<PreMortemResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [extractError, setExtractError] = useState('');
 
   const displayCustomer = useMemo(() => customer.trim() || 'Selected account', [customer]);
 
-  function handleGenerate() {
+  async function handleGenerate() {
     setIsGenerating(true);
-    window.setTimeout(() => {
-      setHasGenerated(true);
+    setExtractError('');
+
+    try {
+      const response = await fetch('/api/extract-pre-mortem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerName: customer,
+          dealValue,
+          ae,
+          csm,
+          context,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Could not generate pre-mortem.');
+      }
+
+      setResult(data as PreMortemResult);
+    } catch (error: any) {
+      setExtractError(error?.message || 'Could not generate pre-mortem.');
+    } finally {
       setIsGenerating(false);
-    }, 650);
+    }
   }
 
   return (
@@ -177,7 +145,7 @@ export default function DashboardPage() {
           </div>
           <div className="dash-status-pill">
             <span />
-            Mock extraction ready
+            LLM extraction ready
           </div>
         </header>
 
@@ -215,14 +183,21 @@ export default function DashboardPage() {
               <textarea value={context} onChange={(event) => setContext(event.target.value)} />
             </label>
 
-            <button className="dash-primary-action" onClick={handleGenerate} type="button">
+            {extractError && <div className="dash-error">{extractError}</div>}
+
+            <button
+              className="dash-primary-action"
+              disabled={isGenerating}
+              onClick={handleGenerate}
+              type="button"
+            >
               {isGenerating ? 'Reading deal context...' : 'Generate Pre-Mortem'}
               <ArrowRight size={18} />
             </button>
           </form>
 
           <section className="dash-output-card">
-            {!hasGenerated ? (
+            {!result ? (
               <div className="dash-empty-state">
                 <Sparkles size={28} />
                 <h2>Pre-mortem appears here</h2>
@@ -241,24 +216,24 @@ export default function DashboardPage() {
                   </div>
                   <div className="dash-risk-badge">
                     <span>Day-Zero risk</span>
-                    High
+                    {result.riskLevel}
                   </div>
                 </div>
 
                 <div className="dash-metric-row">
                   <article>
                     <AlertTriangle size={18} />
-                    <strong>3</strong>
+                    <strong>{result.alertsCount}</strong>
                     <span>Pre-mortem alerts</span>
                   </article>
                   <article>
                     <ClipboardCheck size={18} />
-                    <strong>4</strong>
+                    <strong>{result.promisesCount}</strong>
                     <span>Sales promises</span>
                   </article>
                   <article>
                     <Target size={18} />
-                    <strong>5</strong>
+                    <strong>{result.actionsCount}</strong>
                     <span>First-week actions</span>
                   </article>
                 </div>
@@ -272,13 +247,13 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="dash-alert-list">
-                    {alerts.map((alert) => (
-                      <article key={alert.title} className={`dash-alert-card risk-${alert.risk.toLowerCase()}`}>
+                    {result.alerts.map((alert) => (
+                      <article key={alert.title} className={`dash-alert-card risk-${alert.level.toLowerCase()}`}>
                         <div className="dash-alert-top">
                           <strong>{alert.title}</strong>
-                          <span>{alert.risk}</span>
+                          <span>{alert.level}</span>
                         </div>
-                        <p>{alert.detail}</p>
+                        <p>{alert.explanation}</p>
                         <div className="dash-next-step">
                           <CheckCircle2 size={16} />
                           {alert.action}
@@ -299,10 +274,10 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="dash-ledger-list">
-                      {promises.map((item) => (
-                        <div className="dash-ledger-row" key={item.promise}>
+                      {result.promises.map((item) => (
+                        <div className="dash-ledger-row" key={item.title}>
                           <div>
-                            <strong>{item.promise}</strong>
+                            <strong>{item.title}</strong>
                             <span>{item.owner} | {item.status}</span>
                           </div>
                           <ReceiptChip>{item.receipt}</ReceiptChip>
@@ -320,12 +295,12 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="dash-action-list">
-                      {actions.map((item) => (
-                        <div className="dash-action-row" key={`${item.window}-${item.task}`}>
-                          <span>{item.window}</span>
+                      {result.actionPlan.map((item) => (
+                        <div className="dash-action-row" key={`${item.day}-${item.action}`}>
+                          <span>{item.day}</span>
                           <div>
-                            <strong>{item.task}</strong>
-                            <p>{item.reason}</p>
+                            <strong>{item.action}</strong>
+                            <p>{item.description}</p>
                           </div>
                         </div>
                       ))}

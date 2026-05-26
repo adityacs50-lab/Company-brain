@@ -3980,8 +3980,26 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 18px 50px rgba(16, 185, 129, 0.22);
 }
 
+.dash-primary-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
 .dash-primary-action:hover {
   transform: translateY(-1px);
+}
+
+.dash-error {
+  margin-top: 14px;
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  border-radius: 12px;
+  background: rgba(244, 63, 94, 0.08);
+  color: #fecdd3;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .dash-output-card {
