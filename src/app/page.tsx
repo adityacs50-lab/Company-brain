@@ -71,7 +71,10 @@ export default function Home() {
     <main className="bx-page">
       <header className="bx-nav bx-nav-simple">
         <a href="#top" className="bx-brand" aria-label="Batonyx home">
-          Batonyx
+          <span className="bx-brand-symbol" aria-hidden="true">
+            B
+          </span>
+          <span>Batonyx</span>
         </a>
         <a href="#book-demo" className="bx-nav-cta">
           Book a Demo
@@ -83,7 +86,10 @@ export default function Home() {
           <p className="bx-eyebrow">Day-Zero Pre-Mortem for Customer Success</p>
           <h1>Context changes everything.</h1>
           <p className="bx-hero-line">
-            The autonomous AI agent that turns Closed-Won deals into verified CS handoff briefs.
+            Every promise. Every concern. Every risk. Verified before kickoff.
+          </p>
+          <p className="bx-hero-copyline">
+            Built for Customer Success leaders who walk into every kickoff prepared.
           </p>
           <div className="bx-hero-actions">
             <a href="#book-demo" className="bx-button bx-button-verde">

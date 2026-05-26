@@ -4463,3 +4463,368 @@ h1, h2, h3, h4, h5, h6 {
     min-height: 240px;
   }
 }
+
+/* ==========================================================================
+   Batonyx Brand Kit v1 Overrides
+   ========================================================================== */
+:root {
+  --bat-onyx: #081220;
+  --bat-slate: #213247;
+  --bat-fog: #E8E8EB;
+  --bat-bone: #FAF8F5;
+  --bat-verde: #2F6F63;
+  --bat-amber: #C79A4A;
+  --bat-ink-soft: rgba(8, 18, 32, 0.72);
+  --bat-line: rgba(8, 18, 32, 0.12);
+  --bat-line-dark: rgba(250, 248, 245, 0.12);
+}
+
+body {
+  background: var(--bat-bone);
+}
+
+.bx-page {
+  background:
+    linear-gradient(90deg, rgba(8, 18, 32, 0.045) 1px, transparent 1px) 0 0 / 48px 48px,
+    radial-gradient(circle at 20% 0%, rgba(199, 154, 74, 0.08), transparent 28%),
+    var(--bat-bone);
+  color: var(--bat-onyx);
+}
+
+.bx-page h1,
+.bx-page h2,
+.bx-page h3 {
+  font-family: 'Fraunces', var(--font-display);
+  color: var(--bat-onyx);
+  letter-spacing: -0.035em;
+}
+
+.bx-nav {
+  border-bottom: 1px solid var(--bat-line);
+  background: rgba(250, 248, 245, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+.bx-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--bat-onyx);
+  font-family: 'Fraunces', var(--font-display);
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.bx-brand-symbol {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: var(--bat-onyx);
+  color: var(--bat-bone);
+  font-family: 'Fraunces', var(--font-display);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.bx-nav-cta,
+.bx-button {
+  border-radius: 4px;
+}
+
+.bx-nav-cta {
+  border-color: var(--bat-onyx);
+  color: var(--bat-onyx);
+}
+
+.bx-nav-cta:hover {
+  background: var(--bat-onyx);
+  color: var(--bat-bone);
+}
+
+.bx-single-hero {
+  min-height: calc(100vh - 76px);
+  padding-top: 90px;
+  padding-bottom: 76px;
+}
+
+.bx-single-hero h1 {
+  max-width: 780px;
+  font-size: clamp(70px, 10vw, 154px);
+  line-height: 0.82;
+}
+
+.bx-eyebrow {
+  color: var(--bat-verde);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+}
+
+.bx-hero-line {
+  max-width: 590px;
+  color: var(--bat-onyx);
+  font-size: clamp(23px, 2.5vw, 36px);
+  line-height: 1.08;
+}
+
+.bx-hero-copyline {
+  max-width: 500px;
+  color: var(--bat-ink-soft);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.bx-button-verde {
+  background: var(--bat-onyx);
+  color: var(--bat-bone);
+  box-shadow: 0 22px 52px rgba(8, 18, 32, 0.18);
+}
+
+.bx-button-verde:hover {
+  background: var(--bat-slate);
+}
+
+.bx-product-card {
+  border: 1px solid rgba(250, 248, 245, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(47, 111, 99, 0.22), rgba(8, 18, 32, 0) 42%),
+    radial-gradient(circle at 85% 8%, rgba(199, 154, 74, 0.18), transparent 30%),
+    var(--bat-onyx);
+  box-shadow: 0 32px 90px rgba(8, 18, 32, 0.28);
+}
+
+.bx-product-top span,
+.bx-alert-panel span,
+.bx-receipt-list span,
+.bx-bento-card > span {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.bx-risk-badge {
+  border-color: rgba(199, 154, 74, 0.44);
+  background: rgba(199, 154, 74, 0.13);
+  color: #F2D38D;
+}
+
+.bx-alert-panel,
+.bx-receipt-list article {
+  border-radius: 4px;
+}
+
+.bx-alert-panel {
+  border-color: rgba(199, 154, 74, 0.2);
+  background: rgba(199, 154, 74, 0.07);
+}
+
+.bx-alert-panel svg {
+  color: var(--bat-amber);
+}
+
+.bx-receipt-list code,
+.bx-bento-footer code {
+  border-color: rgba(47, 111, 99, 0.22);
+  background: rgba(47, 111, 99, 0.09);
+  color: #CFE8DF;
+  font-family: var(--font-mono);
+}
+
+.bx-integrations,
+.bx-pain,
+.bx-final-cta {
+  border-color: var(--bat-line);
+  background: rgba(250, 248, 245, 0.7);
+}
+
+.bx-integrations strong {
+  border-radius: 4px;
+  border-color: var(--bat-line);
+  color: var(--bat-onyx);
+}
+
+.bx-pain h2,
+.bx-final-cta h2 {
+  font-size: clamp(42px, 6vw, 86px);
+}
+
+.bx-bento-section {
+  background:
+    linear-gradient(90deg, rgba(250, 248, 245, 0.05) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--bat-onyx);
+}
+
+.bx-bento-section h2,
+.bx-bento-card h3 {
+  color: var(--bat-bone);
+}
+
+.bx-bento-card,
+.bx-bento-large {
+  border-radius: 8px;
+  border-color: rgba(250, 248, 245, 0.12);
+  background: rgba(250, 248, 245, 0.055);
+}
+
+.bx-bento-icon {
+  border-radius: 4px;
+  background: rgba(47, 111, 99, 0.14);
+  color: #D4EFE7;
+}
+
+.bx-bento-footer strong {
+  color: #D4EFE7;
+}
+
+.bx-final-cta {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(47, 111, 99, 0.1), transparent 34%),
+    var(--bat-bone);
+}
+
+.bx-demo-form {
+  border-radius: 8px;
+  border-color: var(--bat-line);
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.bx-demo-form input {
+  border-radius: 4px;
+  border-color: var(--bat-line);
+  color: var(--bat-onyx);
+}
+
+.bx-demo-form input:focus {
+  border-color: rgba(47, 111, 99, 0.48);
+  box-shadow: 0 0 0 4px rgba(47, 111, 99, 0.08);
+}
+
+.dash-shell {
+  background:
+    linear-gradient(90deg, rgba(250, 248, 245, 0.035) 1px, transparent 1px) 0 0 / 48px 48px,
+    radial-gradient(circle at 86% 9%, rgba(47, 111, 99, 0.18), transparent 26%),
+    var(--bat-onyx);
+}
+
+.dash-sidebar {
+  border-right-color: var(--bat-line-dark);
+  background: rgba(8, 18, 32, 0.94);
+}
+
+.dash-brand-mark {
+  border-radius: 4px;
+  border-color: rgba(250, 248, 245, 0.14);
+  background: var(--bat-bone);
+  color: var(--bat-onyx);
+}
+
+.dash-brand strong,
+.dash-topbar h1,
+.dash-card-heading h2,
+.dash-section-title h3,
+.dash-empty-state h2,
+.dash-summary-card h2 {
+  font-family: 'Fraunces', var(--font-display);
+  letter-spacing: -0.035em;
+}
+
+.dash-eyebrow,
+.dash-risk-badge,
+.dash-action-row > span,
+.dash-receipt,
+.dash-confidence,
+.dash-status-pill {
+  font-family: var(--font-mono);
+}
+
+.dash-nav button,
+.dash-input-card,
+.dash-output-card,
+.dash-section-card,
+.dash-summary-card,
+.dash-metric-row article,
+.dash-alert-card,
+.dash-ledger-row,
+.dash-action-row,
+.dash-sidebar-card,
+.dash-export-bar button,
+.dash-input-card input,
+.dash-input-card textarea {
+  border-radius: 4px;
+}
+
+.dash-nav button.active,
+.dash-nav button:hover {
+  border-color: rgba(47, 111, 99, 0.36);
+  background: rgba(47, 111, 99, 0.13);
+  color: #D4EFE7;
+}
+
+.dash-sidebar-card,
+.dash-input-card,
+.dash-output-card,
+.dash-section-card,
+.dash-summary-card,
+.dash-metric-row article {
+  border-color: var(--bat-line-dark);
+  background: rgba(33, 50, 71, 0.38);
+}
+
+.dash-status-pill,
+.dash-next-step,
+.dash-confidence strong {
+  color: #D4EFE7;
+}
+
+.dash-status-pill,
+.dash-primary-action,
+.dash-action-row > span {
+  background: var(--bat-verde);
+}
+
+.dash-primary-action {
+  border-radius: 4px;
+  color: var(--bat-bone);
+  box-shadow: 0 18px 48px rgba(47, 111, 99, 0.24);
+}
+
+.dash-primary-action:hover {
+  background: #275d54;
+}
+
+.dash-risk-badge,
+.dash-alert-card.risk-high,
+.dash-missing-row {
+  border-color: rgba(199, 154, 74, 0.3);
+  background: rgba(199, 154, 74, 0.09);
+}
+
+.dash-risk-badge,
+.dash-risk-badge span,
+.dash-missing-row p {
+  color: #F2D38D;
+}
+
+.dash-alert-card.risk-medium {
+  border-color: rgba(199, 154, 74, 0.22);
+}
+
+.dash-receipt {
+  border-color: rgba(47, 111, 99, 0.36);
+  background: rgba(47, 111, 99, 0.12);
+  color: #D4EFE7;
+}
+
+.dash-export-bar button {
+  border-color: var(--bat-line-dark);
+}
+
+@media (max-width: 760px) {
+  .bx-single-hero h1 {
+    font-size: clamp(54px, 17vw, 86px);
+  }
+}
