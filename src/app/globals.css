@@ -5091,3 +5091,30 @@ body {
     border-radius: 8px;
   }
 }
+
+/* Ledger receipt wrapping fix */
+.dash-ledger-row {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.dash-ledger-row strong,
+.dash-ledger-row span,
+.dash-receipt {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.dash-ledger-row .dash-receipt {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0;
+  align-items: flex-start;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.dash-receipt svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
