@@ -1,322 +1,229 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowRight, CheckCircle2, ClipboardCheck, Link2, RadioTower, ShieldCheck, Target, TriangleAlert, UsersRound } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { ArrowRight, CheckCircle2, Link2, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { FormEvent, useState } from 'react';
 
-const receiptSignals = [
+const integrations = ['Salesforce', 'Gong', 'Slack', 'Gmail'];
+
+const bentoCards = [
   {
-    label: 'Promises Made',
-    value: '94%',
-    detail: 'Friday onboarding report, custom dashboard, SOC2 review path',
-    receipt: 'Gong 32:14',
-  },
-  {
-    label: 'Buyer KPIs',
-    value: '91%',
-    detail: 'Reduce failed onboarding from 18% to under 8% this quarter',
-    receipt: 'Email thread',
-  },
-  {
-    label: 'Internal Skeptic',
-    value: '86%',
-    detail: 'Technical lead stopped joining calls after API rate-limit question',
+    title: 'Day-Zero Pre-Mortem',
+    label: 'Predict churn before kickoff',
+    body: 'Flags silent skeptics, unresolved objections, and technical risks before CS walks into the first call.',
+    metric: 'Risk level: High',
     receipt: 'Gong 18:42',
   },
   {
-    label: 'Technical Blockers',
-    value: '89%',
-    detail: 'Salesforce duplicate accounts and missing Zendesk tags',
+    title: 'The Expectation Ledger',
+    label: 'Hold Sales accountable',
+    body: 'Turns every promise made during the sales cycle into a verified checklist CS can review before onboarding.',
+    metric: '4 promises found',
+    receipt: 'Email May 18',
+  },
+  {
+    title: 'Source Receipts',
+    label: 'Every claim linked to truth',
+    body: 'Each risk and promise links back to the exact Gong timestamp, Slack message, or email quote.',
+    metric: '100% verifiable',
     receipt: 'Slack #deal-acme',
   },
 ];
 
-const problemPoints = [
-  'Sales closes the deal. Everything they know lives in Gong calls, Slack DMs, and Gmail threads.',
-  'CS walks into the kickoff with a Notion doc and a prayer.',
-  '30% of churn is traceable to misaligned expectations set during the sales cycle.',
-];
-
-const steps = [
-  {
-    title: 'Deal closes in Salesforce',
-    body: 'Batonyx triggers instantly, no human action needed.',
-  },
-  {
-    title: 'Scans Gong, Slack, and Gmail',
-    body: 'It extracts the 4 signals that actually determine retention.',
-  },
-  {
-    title: 'Delivers a verified Handoff Brief',
-    body: 'Straight to Slack and your CRM, with source receipts attached.',
-  },
-];
-
-const signals = [
-  {
-    icon: ClipboardCheck,
-    title: 'Promises Made',
-    body: 'Every commitment Sales made during negotiation, with the exact Gong timestamp it was said.',
-  },
-  {
-    icon: Target,
-    title: 'Buyer KPIs',
-    body: 'What success looks like to this customer, captured in their own words.',
-  },
-  {
-    icon: UsersRound,
-    title: 'Internal Skeptics',
-    body: "Who pushed back during the sale and why they weren't fully sold.",
-  },
-  {
-    icon: TriangleAlert,
-    title: 'Technical Blockers',
-    body: "Integration risks and open technical questions that didn't get resolved before close.",
-  },
-];
-
-const betaTools = ['Gong', 'Salesforce', 'Slack'];
+const LEADS_ENDPOINT =
+  'https://script.google.com/macros/s/AKfycbwS8DX_J-1a7mwdDqVmh5jYOlGgHeX-SC8W1qspN3uFUUjWgC5IgaEf4JuVeor8dgAT/exec';
 
 export default function Home() {
-  const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
-  const [tools, setTools] = useState<string[]>(['Gong', 'Salesforce']);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    company: '',
+  });
+  const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
-  const earlyAccessHref = useMemo(() => {
-    const subject = encodeURIComponent('Batonyx early access');
-    const body = encodeURIComponent(
-      `Email: ${email || 'not provided'}\nCompany: ${company || 'not provided'}\nTools: ${
-        tools.length ? tools.join(', ') : 'not provided'
-      }\n\nI want to see Batonyx for sales-to-CS handoff briefs.`
-    );
-
-    return `mailto:shindeadityau@gmail.com?subject=${subject}&body=${body}`;
-  }, [company, email, tools]);
-
-  const submitEarlyAccess = (event: FormEvent<HTMLFormElement>) => {
+  const submitDemoRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    window.location.href = earlyAccessHref;
-  };
+    setFormStatus('submitting');
 
-  const toggleTool = (tool: string) => {
-    setTools((current) => (current.includes(tool) ? current.filter((item) => item !== tool) : [...current, tool]));
+    try {
+      await fetch(LEADS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          source: 'batonyx_landing_page',
+          name: form.name,
+          email: form.email,
+          company: form.company,
+          submittedAt: new Date().toISOString(),
+        }),
+      });
+
+      setFormStatus('success');
+      setForm({ name: '', email: '', company: '' });
+    } catch {
+      setFormStatus('error');
+    }
   };
 
   return (
-    <main className="bt-page">
-      <header className="bt-nav">
-        <Link href="/" className="bt-brand" aria-label="Batonyx home">
+    <main className="bx-page">
+      <header className="bx-nav bx-nav-simple">
+        <a href="#top" className="bx-brand" aria-label="Batonyx home">
           Batonyx
-        </Link>
-        <nav className="bt-nav-links" aria-label="Main navigation">
-          <a href="#problem">Problem</a>
-          <a href="#signals">Signals</a>
-          <a href="#premortem">Pre-mortem</a>
-        </nav>
-        <a href="#early-access" className="bt-nav-cta">
-          Get Early Access
+        </a>
+        <a href="#book-demo" className="bx-nav-cta">
+          Book a Demo
         </a>
       </header>
 
-      <section className="bt-hero">
-        <div className="bt-hero-copy">
-          <p className="bt-eyebrow">Sales-to-CS handoff briefs</p>
-          <h1>Your CS Team Shouldn't Go Into Kickoffs Blind.</h1>
-          <p className="bt-hero-lede">
-            Batonyx turns every Closed-Won deal into a structured, source-verified Handoff Brief so your CS team knows
-            exactly what was promised, who the skeptic is, and where the risk is. Before the first call.
+      <section className="bx-hero bx-single-hero" id="top">
+        <div className="bx-hero-copy">
+          <p className="bx-eyebrow">Day-Zero Pre-Mortem for Customer Success</p>
+          <h1>Context changes everything.</h1>
+          <p className="bx-hero-line">
+            The autonomous AI agent that turns Closed-Won deals into verified CS handoff briefs.
           </p>
-          <div className="bt-hero-actions">
-            <a href="#early-access" className="bt-button-primary">
-              Get Early Access <ArrowRight size={17} />
+          <div className="bx-hero-actions">
+            <a href="#book-demo" className="bx-button bx-button-verde">
+              Book a Demo <ArrowRight size={17} />
             </a>
-            <Link href="/admin/handoff" className="bt-button-secondary">
-              Open MVP
-            </Link>
           </div>
         </div>
 
-        <aside className="bt-product-proof" aria-label="Batonyx handoff brief preview">
-          <div className="bt-proof-top">
+        <aside className="bx-product-card" aria-label="Batonyx handoff brief preview">
+          <div className="bx-product-top">
             <div>
-              <span>Handoff Brief</span>
+              <span>Closed-Won account</span>
               <strong>Acme Analytics</strong>
             </div>
-            <span className="bt-risk-pill">Day-Zero risk: High</span>
+            <span className="bx-risk-badge">Day-Zero risk: High</span>
           </div>
-          <div className="bt-signal-list">
-            {receiptSignals.map((signal) => (
-              <article key={signal.label} className="bt-signal-row">
-                <div className="bt-signal-score">{signal.value}</div>
-                <div>
-                  <h2>{signal.label}</h2>
-                  <p>{signal.detail}</p>
-                </div>
-                <span>
-                  <Link2 size={13} /> {signal.receipt}
-                </span>
-              </article>
-            ))}
+
+          <div className="bx-alert-panel">
+            <TriangleAlert size={22} />
+            <div>
+              <span>Pre-Mortem Alert</span>
+              <p>Technical lead disengaged after an unresolved API rate-limit objection.</p>
+            </div>
           </div>
-          <div className="bt-proof-footer">
-            <ShieldCheck size={16} />
-            <span>Every claim has a confidence score and source receipt.</span>
+
+          <div className="bx-receipt-list">
+            <article>
+              <span>Expectation</span>
+              <p>AE promised a custom churn-risk report within 30 days.</p>
+              <code>
+                <Link2 size={12} /> Gong 00:32:14
+              </code>
+            </article>
+            <article>
+              <span>Action</span>
+              <p>CS should book technical alignment before kickoff.</p>
+              <code>
+                <Link2 size={12} /> Slack #deal-acme
+              </code>
+            </article>
           </div>
         </aside>
       </section>
 
-      <section className="bt-problem" id="problem">
-        <div className="bt-section-heading">
-          <p className="bt-eyebrow">The problem</p>
-          <h2>Context dies at handoff. Churn starts on Day 1.</h2>
-        </div>
-        <div className="bt-problem-grid">
-          {problemPoints.map((point, index) => (
-            <article key={point}>
-              <span>0{index + 1}</span>
-              <p>{point}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="bt-how">
-        <div className="bt-section-heading">
-          <p className="bt-eyebrow">How it works</p>
-          <h2>Batonyx runs automatically. No meetings, no handoff calls.</h2>
-        </div>
-        <div className="bt-step-grid">
-          {steps.map((step, index) => (
-            <article key={step.title}>
-              <span>{index + 1}</span>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="bt-signals" id="signals">
-        <div className="bt-section-heading">
-          <p className="bt-eyebrow">The 4 signals</p>
-          <h2>Everything CS needs to know. Nothing they have to guess.</h2>
-          <p>
-            Each signal gets a confidence score and a deep-link receipt so CS can verify every single one before the
-            kickoff.
-          </p>
-        </div>
-        <div className="bt-feature-grid">
-          {signals.map((signal) => {
-            const Icon = signal.icon;
-            return (
-              <article key={signal.title}>
-                <Icon size={24} />
-                <h3>{signal.title}</h3>
-                <p>{signal.body}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="bt-ledger">
+      <section className="bx-integrations" aria-label="Integrations">
+        <span>Pulls context seamlessly from:</span>
         <div>
-          <p className="bt-eyebrow">Expectation Ledger</p>
-          <h2>Sales promised it. Now there's a receipt.</h2>
+          {integrations.map((integration) => (
+            <strong key={integration}>{integration}</strong>
+          ))}
         </div>
+      </section>
+
+      <section className="bx-pain">
+        <p className="bx-eyebrow">The status quo is broken</p>
+        <h2>When a deal closes, the context dies.</h2>
         <p>
-          The Expectation Ledger is a living checklist of every commitment made during the sales cycle. CS knows what
-          was promised. Sales is accountable. No more &quot;that&apos;s not what we sold them&quot; conversations 60
-          days in.
+          Sales promised one thing, CS walks in blind, and the customer churns in 90 days. The manual handoff does not
+          work.
         </p>
       </section>
 
-      <section className="bt-premortem" id="premortem">
-        <div className="bt-premortem-copy">
-          <p className="bt-eyebrow">Day-Zero Pre-Mortem</p>
-          <h2>We predict churn before the customer logs in.</h2>
-          <p>
-            Batonyx analyzes pre-sales behavioral signals to flag accounts at risk before onboarding begins.
-          </p>
-          <strong>Stop churn before it starts.</strong>
+      <section className="bx-bento-section">
+        <div className="bx-section-heading">
+          <p className="bx-eyebrow">The solution</p>
+          <h2>Batonyx turns handoff chaos into a verified launch plan.</h2>
         </div>
-        <div className="bt-alert-card">
-          <RadioTower size={26} />
-          <span>Example signal</span>
-          <p>The technical lead stopped joining calls 3 weeks before close. Implementation stall risk is high.</p>
+
+        <div className="bx-bento-grid bx-bento-single-page">
+          {bentoCards.map((card, index) => (
+            <article className={index === 0 ? 'bx-bento-card bx-bento-large' : 'bx-bento-card'} key={card.title}>
+              <div className="bx-bento-icon">
+                {index === 2 ? <ShieldCheck size={24} /> : <TriangleAlert size={24} />}
+              </div>
+              <span>{card.label}</span>
+              <h3>{card.title}</h3>
+              <p>{card.body}</p>
+              <div className="bx-bento-footer">
+                <strong>{card.metric}</strong>
+                <code>{card.receipt}</code>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
-      <section className="bt-beta">
-        <div className="bt-section-heading">
-          <p className="bt-eyebrow">Private beta</p>
-          <h2>Built for VP of CS at mid-market B2B SaaS.</h2>
-          <p>
-            Best fit: 50-300 employee SaaS companies with 5-20 CSMs, high-touch onboarding, and sales context scattered
-            across calls, email, CRM, and Slack.
-          </p>
-        </div>
-        <div className="bt-pricing">
-          <span>Private beta pricing</span>
-          <strong>$800/month</strong>
-          <p>One churned account saved pays for a year.</p>
-        </div>
-      </section>
-
-      <section className="bt-final" id="early-access">
+      <section className="bx-final-cta" id="book-demo">
         <div>
-          <p className="bt-eyebrow">Get early access</p>
-          <h2>Stop going into kickoffs blind.</h2>
-          <p>Batonyx is in private beta. We&apos;re onboarding 10 design partners now.</p>
+          <p className="bx-eyebrow">Book a demo</p>
+          <h2>Stop Day-90 churn before Day 1 begins.</h2>
+          <p>Tell us who you are. We will show you how Batonyx turns one Closed-Won deal into a Day-Zero Pre-Mortem.</p>
         </div>
 
-        <form className="bt-access-form" onSubmit={submitEarlyAccess}>
+        <form className="bx-demo-form" onSubmit={submitDemoRequest}>
+          <label>
+            Name
+            <input
+              required
+              type="text"
+              value={form.name}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              placeholder="Aditya Shinde"
+            />
+          </label>
           <label>
             Work email
             <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
               required
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm({ ...form, email: event.target.value })}
+              placeholder="you@company.com"
             />
           </label>
           <label>
             Company
             <input
-              type="text"
-              value={company}
-              onChange={(event) => setCompany(event.target.value)}
-              placeholder="Acme SaaS"
               required
+              type="text"
+              value={form.company}
+              onChange={(event) => setForm({ ...form, company: event.target.value })}
+              placeholder="Acme SaaS"
             />
           </label>
-          <fieldset>
-            <legend>Tools you use</legend>
-            <div>
-              {betaTools.map((tool) => (
-                <button
-                  key={tool}
-                  type="button"
-                  className={tools.includes(tool) ? 'selected' : ''}
-                  onClick={() => toggleTool(tool)}
-                >
-                  <CheckCircle2 size={15} /> {tool}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <button type="submit" className="bt-button-primary">
-            Apply for Early Access <ArrowRight size={17} />
+          <button className="bx-button bx-button-verde" type="submit" disabled={formStatus === 'submitting'}>
+            {formStatus === 'submitting' ? 'Submitting...' : 'Book a Demo'} <ArrowRight size={17} />
           </button>
+          {formStatus === 'success' ? (
+            <p className="bx-form-success">
+              <CheckCircle2 size={14} /> You are on the list. We will reach out for a demo.
+            </p>
+          ) : formStatus === 'error' ? (
+            <p className="bx-form-error">Could not submit. Try again in a moment.</p>
+          ) : (
+            <p>
+              <CheckCircle2 size={14} /> Private beta for mid-market B2B SaaS CS teams.
+            </p>
+          )}
         </form>
       </section>
-
-      <footer className="bt-footer">
-        <span>Batonyx</span>
-        <Link href="/admin/handoff">MVP demo</Link>
-        <a href="mailto:shindeadityau@gmail.com">shindeadityau@gmail.com</a>
-      </footer>
     </main>
   );
 }
