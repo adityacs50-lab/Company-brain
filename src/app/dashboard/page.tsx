@@ -91,21 +91,21 @@ export default function DashboardPage() {
   function buildSlackBrief(data: PreMortemResult) {
     const alertLines = data.alerts.length
       ? data.alerts
-          .map((alert) => `• ${alert.title} - _Action: ${alert.action}_ (Receipt: ${alert.receipt})`)
+          .map((alert) => `- ${alert.title} - _Action: ${alert.action}_ (Receipt: ${alert.receipt})`)
           .join('\n')
-      : '• No alerts extracted.';
+      : '- No alerts extracted.';
 
     const promiseLines = data.promises.length
       ? data.promises
-          .map((promise) => `• [ ] ${promise.title} - _Owner: ${promise.owner}_ (Receipt: ${promise.receipt})`)
+          .map((promise) => `- [ ] ${promise.title} - _Owner: ${promise.owner}_ (Receipt: ${promise.receipt})`)
           .join('\n')
-      : '• [ ] No promises extracted.';
+      : '- [ ] No promises extracted.';
 
     const missingLines = data.missingInformation.length
       ? data.missingInformation
-          .map((item) => `• ${item.topic} - _Impact: ${item.impact}_`)
+          .map((item) => `- ${item.topic} - _Impact: ${item.impact}_`)
           .join('\n')
-      : '• No missing information flagged.';
+      : '- No missing information flagged.';
 
     const actionLines = data.actionPlan.length
       ? data.actionPlan
@@ -113,7 +113,7 @@ export default function DashboardPage() {
           .join('\n')
       : '1. Day 1: Review handoff context with AE and CSM.';
 
-    return `🚨 *Batonyx Day-Zero Pre-Mortem: ${displayCustomer}*
+    return `*Batonyx Day-Zero Pre-Mortem: ${displayCustomer}*
 *Risk Level:* ${data.riskLevel}
 
 *Pre-Mortem Alerts:*
